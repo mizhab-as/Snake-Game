@@ -33,3 +33,13 @@ class SnakeGame:
             self.food = self.spawn_food()
         else:
             self.snake.pop()
+
+    def is_game_over(self):
+        head = self.snake[0]
+        # Check wall collision
+        if head[0] < 0 or head[0] >= 600 or head[1] < 0 or head[1] >= 400:
+            return True
+        # Check self collision
+        if head in self.snake[1:]:
+            return True
+        return False
