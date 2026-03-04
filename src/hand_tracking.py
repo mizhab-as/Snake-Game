@@ -6,7 +6,6 @@ from collections import deque
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7)
 
-# Hand position history for motion detection
 hand_position_history = deque(maxlen=5)
 last_direction = None
 
@@ -19,49 +18,31 @@ def calculate_distance(point1, point2):
 
 
 def is_finger_extended(tip, pip, dip):
-    """
-    Check if a finger is extended using distance-based logic.
-    A finger is extended if the tip is significantly separated from the PIP joint.
-    """
+    """Check if a finger is extended based on distance from PIP joint."""
     tip_to_pip = calculate_distance(tip, pip)
     dip_to_pip = calculate_distance(dip, pip)
     return tip_to_pip > dip_to_pip * 0.9
 
 
 def detect_gesture(hand):
-    """
-    Detect the current hand gesture.
-    Returns: "POINTING", "OPEN", or "FIST"
-    """
-    # Count extended fingers
+    """Detect hand gesture: POINTING, OPEN, or FIST."""
     extended_fingers = 0
     
-    # Check index finger (8=tip, 7=dip, 6=pip)
+    if is_finger_extended(hand.landmark[8], hand.landmark[7], hand.landmark[6]):
+        extended_fingers += 1
+    
+    if is_finger_extended(hand.landmark[12], hand.landmark[11], hand.landmark[10]):
+        extended_fingers += 1
+    
+    if is_finger_extended(hand.landmark[16], hand.landmark[15], hand.landmark[14]):
+        extended_fingers += 1
+    
+    if is_finger_extended(hand.landmark[20], hand.landmark[19], hand.landmark[18]):
+        extended_fingers += 1
+    
     index_extended = is_finger_extended(hand.landmark[8], hand.landmark[7], hand.landmark[6])
-    if index_extended:
-        extended_fingers += 1
-    
-    # Check middle finger (12=tip, 11=dip, 10=pip)
-    middle_extended = is_finger_extended(hand.landmark[12], hand.landmark[11], hand.landmark[10])
-    if middle_extended:
-        extended_fingers += 1
-    
-    # Check ring finger (16=tip, 15=dip, 14=pip)
-    ring_extended = is_finger_extended(hand.landmark[16], hand.landmark[15], hand.landmark[14])
-    if ring_extended:
-        extended_fingers += 1
-    
-    # Check pinky (20=tip, 19=dip, 18=pip)
-    pinky_extended = is_finger_extended(hand.landmark[20], hand.landmark[19], hand.landmark[18])
-    if pinky_extended:
-        extended_fingers += 1
-    
-    # Check thumb (4=tip, 3=dip, 2=pip)
     thumb_extended = is_finger_extended(hand.landmark[4], hand.landmark[3], hand.landmark[2])
-    if thumb_extended:
-        extended_fingers += 1
     
-    # Determine gesture based on extended fingers
     if index_extended and extended_fingers == 1:
         return "POINTING"
     elif extended_fingers >= 4:
@@ -71,18 +52,7 @@ def detect_gesture(hand):
 
 
 def get_direction(frame):
-    """
-    Detect direction based on hand MOVEMENT.
-    Track hand position and determine direction of movement.
-    
-    When you move your hand UP, the snake goes UP.
-    When you move your hand DOWN, the snake goes DOWN.
-    Etc.
-    
-    Returns: (direction, confidence)
-    - direction: "UP", "DOWN", "LEFT", "RIGHT", or None
-    - confidence: hand detection confidence (0-1)
-    """
+    """Detect direction from hand movement."""
     global last_direction
     
     if frame is None:
@@ -102,56 +72,42 @@ def get_direction(frame):
         if hand_confidence < 0.7:
             return None, hand_confidence
         
-        # Get hand position (wrist = center of hand)
         wrist = hand.landmark[0]
-        
-        # Check gesture type for information only (don't skip based on it)
         gesture = detect_gesture(hand)
         
-        # Add current position to history REGARDLESS OF GESTURE
         hand_position_history.append((wrist.x, wrist.y))
         
-        # Need at least 2 positions to detect motion (reduced from 3)
         if len(hand_position_history) < 2:
             return None, hand_confidence
         
-        # Get oldest and newest positions
         positions = list(hand_position_history)
         old_x, old_y = positions[0]
         new_x, new_y = positions[-1]
         
-        # Calculate displacement (movement vector)
         dx = new_x - old_x
         dy = new_y - old_y
         
         abs_dx = abs(dx)
         abs_dy = abs(dy)
         
-        # Much lower threshold for detecting movement
         min_threshold = 0.02
-        
         direction = None
         
-        # Determine direction based on which motion is dominant
         if abs_dy > abs_dx and abs_dy > min_threshold:
-            # Vertical motion is dominant
             if dy < 0:
-                direction = "UP"  # Hand moved upward
+                direction = "UP"
             else:
-                direction = "DOWN"  # Hand moved downward
+                direction = "DOWN"
         elif abs_dx > abs_dy and abs_dx > min_threshold:
-            # Horizontal motion is dominant
             if dx < 0:
-                direction = "LEFT"  # Hand moved leftward
+                direction = "LEFT"
             else:
-                direction = "RIGHT"  # Hand moved rightward
+                direction = "RIGHT"
         
-        # Return detected direction
         if direction:
             last_direction = direction
             return direction, hand_confidence
         
-        # Return last known direction if no new motion detected
         return last_direction, hand_confidence
     
     except Exception as e:
