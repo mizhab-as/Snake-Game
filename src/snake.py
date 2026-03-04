@@ -13,6 +13,7 @@ class SnakeGame:
         self.food = self.spawn_food()
         self.score = 0
         self.food_eaten = False
+        self.game_over = False
 
     def spawn_food(self):
         """Spawn food in a valid location (not on snake body)."""
@@ -25,6 +26,9 @@ class SnakeGame:
 
     def move(self):
         """Move the snake and handle food collision with growth."""
+        if self.game_over:
+            return
+
         # Use next_direction for smoother controls
         if self.next_direction:
             self.direction = self.next_direction
@@ -56,6 +60,13 @@ class SnakeGame:
             head_y = PLAY_AREA_TOP
 
         new_head = (head_x, head_y)
+
+        will_eat = new_head == self.food
+        body_to_check = self.snake if will_eat else self.snake[:-1]
+        if new_head in body_to_check:
+            self.game_over = True
+            return
+
         self.snake.insert(0, new_head)
 
         # Check if food is eaten
@@ -69,8 +80,4 @@ class SnakeGame:
 
     def is_game_over(self):
         """Check if snake collides with itself."""
-        head = self.snake[0]
-        # Only check self-collision now (no wall collision due to wrapping)
-        if head in self.snake[1:]:
-            return True
-        return False
+        return self.game_over
