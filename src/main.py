@@ -22,7 +22,6 @@ tiny_font = pygame.font.Font(None, 24)
 HIGH_SCORE_FILE = "/tmp/snake_leaderboard.json"
 
 def load_leaderboard():
-    """Load leaderboard from file."""
     try:
         if os.path.exists(HIGH_SCORE_FILE):
             with open(HIGH_SCORE_FILE, 'r') as f:
@@ -33,7 +32,6 @@ def load_leaderboard():
     return []
 
 def save_leaderboard(leaderboard):
-    """Save leaderboard to file."""
     try:
         with open(HIGH_SCORE_FILE, 'w') as f:
             json.dump({'leaderboard': leaderboard}, f)
@@ -41,7 +39,6 @@ def save_leaderboard(leaderboard):
         pass
 
 def add_to_leaderboard(score, name="Player"):
-    """Add a score to the leaderboard if it qualifies."""
     leaderboard = load_leaderboard()
     entry = {
         'name': name,
@@ -118,7 +115,6 @@ def draw_stats(current_score):
     screen.blit(status_text, (SCREEN_WIDTH // 2 - 60, 50))
 
 def draw_leaderboard():
-    """Draw the leaderboard overlay."""
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
     overlay.set_alpha(200)
     overlay.fill((0, 0, 0))
@@ -147,7 +143,6 @@ def draw_leaderboard():
     screen.blit(close_text, close_rect)
 
 def draw_power_ups():
-    """Draw active power-ups on screen."""
     for i, (power_type, frames_left) in enumerate(game.active_power_ups.items()):
         if power_type == PowerUp.TYPE_SPEED_BOOST:
             color = (255, 255, 100)
@@ -173,18 +168,15 @@ def draw_power_ups():
         pygame.draw.rect(screen, (0, 200, 0), (x_pos + 10, 27, bar_width, 8))
 
 def draw_obstacles():
-    """Draw obstacles on the map."""
     for obs_x, obs_y in game.obstacles:
         pygame.draw.rect(screen, (150, 100, 100), (obs_x, obs_y, BLOCK, BLOCK))
         pygame.draw.rect(screen, (200, 150, 150), (obs_x, obs_y, BLOCK, BLOCK), 2)
 
 def draw_particles():
-    """Draw particle effects."""
     for particle in game.particles:
         particle.draw(screen)
 
 def draw_mode_select():
-    """Draw game mode selection screen with arrow key navigation."""
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
     overlay.set_alpha(220)
     overlay.fill((10, 15, 40))

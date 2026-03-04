@@ -11,21 +11,18 @@ last_direction = None
 
 
 def calculate_distance(point1, point2):
-    """Calculate Euclidean distance between two landmarks."""
     dx = point1.x - point2.x
     dy = point1.y - point2.y
     return math.sqrt(dx * dx + dy * dy)
 
 
 def is_finger_extended(tip, pip, dip):
-    """Check if a finger is extended based on distance from PIP joint."""
     tip_to_pip = calculate_distance(tip, pip)
     dip_to_pip = calculate_distance(dip, pip)
     return tip_to_pip > dip_to_pip * 0.9
 
 
 def detect_gesture(hand):
-    """Detect hand gesture: POINTING, OPEN, or FIST."""
     extended_fingers = 0
     
     if is_finger_extended(hand.landmark[8], hand.landmark[7], hand.landmark[6]):
@@ -52,7 +49,6 @@ def detect_gesture(hand):
 
 
 def get_direction(frame):
-    """Detect direction from hand movement."""
     global last_direction
     
     if frame is None:
@@ -115,7 +111,6 @@ def get_direction(frame):
 
 
 def get_hand_position(frame):
-    """Get hand position for display (0-1 range) and gesture type."""
     if frame is None:
         return None, None, None
     

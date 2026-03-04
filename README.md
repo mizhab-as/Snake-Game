@@ -1,146 +1,80 @@
-# 🐍 Snake Game with Hand Gesture Control
+# Snake Game with Hand Gesture Control
 
-A modern Snake game implementation with **hand gesture control** using computer vision, featuring multiple game modes, leaderboard system, and power-ups.
+A Snake game with hand gesture control using computer vision. Features multiple game modes, leaderboard system, and power-ups.
 
-## ✨ Features
+## Features
 
 ### Game Modes
-- **Classic Mode**: Traditional snake gameplay with wrapping borders
-- **Arcade Mode**: Obstacles that increase with difficulty level
-- **Zen Mode**: Infinite gameplay with no death
-
-### Hand Gesture Controls
-- Control the snake by moving your hand in front of the camera
-- Real-time hand tracking using MediaPipe
-- Automatic fallback to keyboard controls if no camera detected
-
-### Gameplay Features
-- **Power-ups System**:
-  - Speed Boost (yellow) - Temporary speed increase
-  - Score Multiplier (orange) - 2x points
-  - Shield (blue) - Protects from one obstacle collision
-- **Progressive Difficulty**: Game difficulty increases every 200 points
-- **Combo System**: Track consecutive food eaten
-- **Particle Effects**: Visual feedback for actions
-- **Leaderboard**: Top 10 high scores with player names
+- **Classic**: Traditional snake with wrapping borders
+- **Arcade**: Obstacles that increase with difficulty
+- **Zen**: No death, infinite gameplay
 
 ### Controls
-- **Hand Gestures**: Move your hand up/down/left/right
+- **Hand Gestures**: Move your hand up/down/left/right to control snake
 - **Keyboard**: Arrow keys or WASD
-- **H**: Toggle help menu
-- **L**: View leaderboard
-- **R**: Restart game
-- **M**: Return to main menu (after game over)
-- **Q**: Quit game
+- Press **H** for help, **L** for leaderboard, **R** to restart, **M** for main menu, **Q** to quit
 
-## 🚀 Installation
+### Gameplay
+- Power-ups: Speed Boost, Score Multiplier (2x), Shield
+- Progressive difficulty increases every 200 points
+- Combo system tracks consecutive food eaten
+- Particle effects for visual feedback
+- Top 10 leaderboard with player names
 
-### Prerequisites
-- Python 3.8 or higher
-- Webcam (optional, for hand gesture control)
+## Installation
 
-### Setup
+Requires Python 3.8+ and a webcam (optional for hand tracking).
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/snake_game.git
+git clone https://github.com/mizhab-as/snake_game.git
 cd snake_game
-```
-
-2. Create a virtual environment:
-```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-## 🎮 How to Play
-
-1. Start the game:
-```bash
 python src/main.py
 ```
 
-2. Select your game mode using **UP/DOWN** arrow keys and press **ENTER**
+## How to Play
 
-3. Control the snake:
-   - Move your hand in front of the camera, OR
-   - Use arrow keys/WASD
+1. Start the game with `python src/main.py`
+2. Select mode with UP/DOWN arrows, press ENTER
+3. Control snake with hand gestures or keyboard
+4. Collect food and power-ups, avoid obstacles
+5. Try to beat the high score
 
-4. Collect red food to grow and score points
-
-5. Grab power-ups for special abilities
-
-6. Avoid hitting yourself (or obstacles in Arcade mode)
-
-## 📦 Project Structure
+## Project Structure
 
 ```
 snake_game/
 ├── src/
-│   ├── main.py           # Main game loop and UI
-│   ├── snake.py          # Game logic and mechanics
+│   ├── main.py           # Game loop and UI
+│   ├── snake.py          # Game logic
 │   └── hand_tracking.py  # Hand gesture detection
-├── assets/               # (Reserved for future assets)
-├── requirements.txt      # Python dependencies
-└── README.md            # This file
+├── requirements.txt
+└── README.md
 ```
 
-## 🛠️ Technical Details
+## Tech Stack
 
-### Technologies Used
-- **pygame**: Game rendering and UI
-- **OpenCV**: Video capture and image processing
-- **MediaPipe**: Hand tracking and gesture detection
-- **NumPy**: Numerical computations
+- pygame (game engine)
+- OpenCV (video capture)
+- MediaPipe (hand tracking)
+- NumPy (math)
 
-### Game Mechanics
-- Grid-based movement (20x20 pixel blocks)
-- Toroidal world (wrap-around borders)
-- Real-time collision detection
-- Dynamic obstacle generation (Arcade mode)
-- Persistent leaderboard storage
+## Scoring
 
-## 🎯 Scoring System
-
-- Food: 10 points × difficulty level × active multiplier
+- Food: 10 points × difficulty × multiplier
 - Power-up: 50 points
-- Combo multiplier increases with consecutive food collection
+- Combo system for consecutive food
 
-## 📝 Future Enhancements
+## Contributing
 
-- [ ] Sound effects and background music
-- [ ] Additional power-up types
-- [ ] Customizable themes
-- [ ] Multiplayer mode
-- [ ] More game modes
-- [ ] Achievement system
+Feel free to report bugs, suggest features, or submit pull requests.
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! Feel free to:
-- Report bugs
-- Suggest new features
-- Submit pull requests
+MIT License
 
-## 📄 License
+## Author
 
-This project is open source and available under the MIT License.
-
-## 👨‍💻 Author
-
-Created with ❤️ by [Your Name]
-
-## 🙏 Acknowledgments
-
-- MediaPipe for hand tracking technology
-- pygame community for excellent documentation
-- OpenCV for computer vision tools
-
----
-
-**Enjoy playing!** 🎮✨
+Mizhab A S

@@ -64,7 +64,6 @@ class SnakeGame:
         self.generate_obstacles()
 
     def spawn_food(self):
-        """Spawn food in a valid location (not on snake body)."""
         while True:
             x = random.randrange(0, WIDTH, BLOCK)
             y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
@@ -72,7 +71,6 @@ class SnakeGame:
                 return (x, y)
     
     def spawn_power_up(self):
-        """Randomly spawn a power-up (20% chance)."""
         if random.random() > 0.8 and len(self.power_ups) < 3:
             x = random.randrange(0, WIDTH, BLOCK)
             y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
@@ -81,15 +79,11 @@ class SnakeGame:
                 self.power_ups.append(PowerUp(x, y, power_type))
     
     def update_difficulty(self):
-        """Increase difficulty based on score."""
         new_difficulty = 1 + (self.score // 200)
         if new_difficulty != self.difficulty:
             self.difficulty = new_difficulty
-            if self.mode == GameMode.ARCADE:
-                self.generate_obstacles()
     
     def update_power_ups(self):
-        """Update power-up durations and remove expired ones."""
         expired = []
         for power_type, frames_left in self.active_power_ups.items():
             self.active_power_ups[power_type] -= 1
@@ -102,25 +96,22 @@ class SnakeGame:
                 self.shield_active = False
     
     def generate_obstacles(self):
-        """Generate obstacles based on game mode and difficulty."""
         self.obstacles = []
         if self.mode == GameMode.ARCADE:
-            num_obstacles = max(4, int(4 + (self.difficulty * 1.5)))
-            attempts = 0
-            while len(self.obstacles) < num_obstacles and attempts < 100:
-                x = random.randrange(0, WIDTH, BLOCK)
-                y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
-                if (x, y) not in self.snake and (x, y) != self.food and (x, y) not in self.obstacles:
-                    self.obstacles.append((x, y))
-                attempts += 1
+            num_obstacles = random.randint(8, 12)
+            for _ in range(num_obstacles):
+                while True:
+                    x = random.randrange(0, WIDTH, BLOCK)
+                    y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
+                    if (x, y) not in self.snake and (x, y) != self.food:
+                        self.obstacles.append((x, y))
+                        break
     
     def spawn_particles(self, x, y, color, count=10):
-        """Spawn particles at given position."""
         for _ in range(count):
             self.particles.append(Particle(x, y, color))
 
     def move(self):
-        """Move the snake and handle food collision with growth."""
         if self.game_over:
             return
 
@@ -201,12 +192,10 @@ class SnakeGame:
         self.update_difficulty()
     
     def update_particles(self):
-        """Update and remove dead particles."""
         for particle in self.particles[:]:
             particle.update()
             if particle.lifetime <= 0:
                 self.particles.remove(particle)
 
     def is_game_over(self):
-        """Check if snake collides with itself."""
         return self.game_over
