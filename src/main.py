@@ -1,6 +1,5 @@
 import pygame
 import cv2
-import numpy as np
 import json
 import os
 from datetime import datetime
@@ -19,7 +18,7 @@ font = pygame.font.Font(None, 48)
 small_font = pygame.font.Font(None, 32)
 tiny_font = pygame.font.Font(None, 24)
 
-HIGH_SCORE_FILE = "/tmp/snake_leaderboard.json"
+HIGH_SCORE_FILE = "leaderboard.json"
 
 def load_leaderboard():
     try:
