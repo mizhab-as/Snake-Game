@@ -5,6 +5,32 @@ WIDTH, HEIGHT = 1200, 800
 BLOCK = 20
 PLAY_AREA_TOP = 100
 
+class GameMode:
+    CLASSIC = "classic"
+    ARCADE = "arcade"
+    ZEN = "zen"
+
+class Particle:
+    def __init__(self, x, y, color, lifetime=20):
+        self.x = x
+        self.y = y
+        self.vx = random.uniform(-2, 2)
+        self.vy = random.uniform(-3, 0)
+        self.color = color
+        self.lifetime = lifetime
+        self.max_lifetime = lifetime
+    
+    def update(self):
+        self.x += self.vx
+        self.y += self.vy
+        self.vy += 0.1
+        self.lifetime -= 1
+    
+    def draw(self, screen):
+        alpha = int(255 * (self.lifetime / self.max_lifetime))
+        size = int(4 * (self.lifetime / self.max_lifetime))
+        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), max(1, size))
+
 class PowerUp:
     TYPE_SPEED_BOOST = "speed_boost"
     TYPE_SHIELD = "shield"
@@ -18,7 +44,7 @@ class PowerUp:
 
 class SnakeGame:
     
-    def __init__(self):
+    def __init__(self, mode=GameMode.CLASSIC):
         self.snake = [(WIDTH // 2, (HEIGHT + PLAY_AREA_TOP) // 2)]
         self.direction = "RIGHT"
         self.next_direction = "RIGHT"
@@ -31,6 +57,11 @@ class SnakeGame:
         self.power_ups = []
         self.active_power_ups = {}
         self.food_streak = 0
+        self.mode = mode
+        self.obstacles = []
+        self.shield_active = False
+        self.particles = []
+        self.generate_obstacles()
 
     def spawn_food(self):
         """Spawn food in a valid location (not on snake body)."""
@@ -45,8 +76,8 @@ class SnakeGame:
         if random.random() > 0.8 and len(self.power_ups) < 3:
             x = random.randrange(0, WIDTH, BLOCK)
             y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
-            if (x, y) not in self.snake and (x, y) != self.food:
-                power_type = random.choice([PowerUp.TYPE_SPEED_BOOST, PowerUp.TYPE_MULTIPLIER])
+            if (x, y) not in self.snake and (x, y) != self.food and (x, y) not in self.obstacles:
+                power_type = random.choice([PowerUp.TYPE_SPEED_BOOST, PowerUp.TYPE_MULTIPLIER, PowerUp.TYPE_SHIELD])
                 self.power_ups.append(PowerUp(x, y, power_type))
     
     def update_difficulty(self):
@@ -54,6 +85,8 @@ class SnakeGame:
         new_difficulty = 1 + (self.score // 200)
         if new_difficulty != self.difficulty:
             self.difficulty = new_difficulty
+            if self.mode == GameMode.ARCADE:
+                self.generate_obstacles()
     
     def update_power_ups(self):
         """Update power-up durations and remove expired ones."""
@@ -65,6 +98,26 @@ class SnakeGame:
         
         for power_type in expired:
             del self.active_power_ups[power_type]
+            if power_type == PowerUp.TYPE_SHIELD:
+                self.shield_active = False
+    
+    def generate_obstacles(self):
+        """Generate obstacles based on game mode and difficulty."""
+        self.obstacles = []
+        if self.mode == GameMode.ARCADE:
+            num_obstacles = max(4, int(4 + (self.difficulty * 1.5)))
+            attempts = 0
+            while len(self.obstacles) < num_obstacles and attempts < 100:
+                x = random.randrange(0, WIDTH, BLOCK)
+                y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
+                if (x, y) not in self.snake and (x, y) != self.food and (x, y) not in self.obstacles:
+                    self.obstacles.append((x, y))
+                attempts += 1
+    
+    def spawn_particles(self, x, y, color, count=10):
+        """Spawn particles at given position."""
+        for _ in range(count):
+            self.particles.append(Particle(x, y, color))
 
     def move(self):
         """Move the snake and handle food collision with growth."""
@@ -104,9 +157,20 @@ class SnakeGame:
             self.game_over = True
             return
 
+        if new_head in self.obstacles:
+            if self.shield_active:
+                self.shield_active = False
+                self.active_power_ups.pop(PowerUp.TYPE_SHIELD, None)
+                self.spawn_particles(head_x, head_y, (0, 150, 255), 15)
+                return
+            else:
+                self.game_over = True
+                return
+
         self.snake.insert(0, new_head)
 
         if new_head == self.food:
+            self.spawn_particles(head_x, head_y, (255, 100, 100), 12)
             self.food = self.spawn_food()
             self.food_streak += 1
             self.combo += 1
@@ -126,11 +190,22 @@ class SnakeGame:
         for power_up in self.power_ups[:]:
             if new_head == (power_up.x, power_up.y):
                 self.active_power_ups[power_up.type] = power_up.duration
+                if power_up.type == PowerUp.TYPE_SHIELD:
+                    self.shield_active = True
+                    self.spawn_particles(power_up.x, power_up.y, (100, 255, 100), 20)
                 self.score += 50
                 self.power_ups.remove(power_up)
         
+        self.update_particles()
         self.update_power_ups()
         self.update_difficulty()
+    
+    def update_particles(self):
+        """Update and remove dead particles."""
+        for particle in self.particles[:]:
+            particle.update()
+            if particle.lifetime <= 0:
+                self.particles.remove(particle)
 
     def is_game_over(self):
         """Check if snake collides with itself."""
