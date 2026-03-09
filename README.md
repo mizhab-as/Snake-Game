@@ -25,6 +25,7 @@ A Snake game with hand gesture control using computer vision. Features multiple 
 
 Requires Python 3.8+ and a webcam (optional for hand tracking).
 
+### Option 1: From Source
 ```bash
 git clone https://github.com/mizhab-as/snake_game.git
 cd snake_game
@@ -34,9 +35,14 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
+### Option 2: Standalone Executable (macOS)
+- Download `SnakeGame.app` from [Releases](https://github.com/mizhab-as/snake_game/releases)
+- Extract and double-click to play
+- No Python installation required
+
 ## How to Play
 
-1. Start the game with `python src/main.py`
+1. Start the game with `python src/main.py` or launch the app
 2. Select mode with UP/DOWN arrows, press ENTER
 3. Control snake with hand gestures or keyboard
 4. Collect food and power-ups, avoid obstacles
@@ -66,6 +72,16 @@ snake_game/
 - Food: 10 points × difficulty × multiplier
 - Power-up: 50 points
 - Combo system for consecutive food
+
+## Building Executable
+
+To create a standalone executable:
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name "SnakeGame" src/main.py
+```
+
+Output will be in `dist/SnakeGame.app` (macOS) or `dist/SnakeGame` (Windows/Linux)
 
 ## Contributing
 
