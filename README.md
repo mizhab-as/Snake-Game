@@ -21,6 +21,20 @@ A Snake game with hand gesture control using computer vision. Features multiple 
 - Particle effects for visual feedback
 - Top 10 leaderboard with player names
 
+## Screenshots And Videos
+
+### Screenshots
+
+![Main Menu](assets/screenshots/1.jpeg)
+![Gameplay](assets/screenshots/2.jpeg)
+![Hand Tracking](assets/screenshots/3.jpeg)
+![Leaderboard](assets/screenshots/4.jpeg)
+
+### Demo Videos
+
+- [Watch Demo Video 1](assets/videos/5.mp4)
+- [Watch Demo Video 2](assets/videos/6.mp4)
+
 ## Installation
 
 Requires Python 3.8+ and a webcam (optional for hand tracking).
