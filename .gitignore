@@ -23,4 +23,3 @@ wheels/
 .idea/
 .vscode/
 leaderboard.json
-*.spec

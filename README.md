@@ -27,7 +27,7 @@ Requires Python 3.8+ and a webcam (optional for hand tracking).
 
 ### Option 1: From Source
 ```bash
-git clone https://github.com/mizhab-as/snake_game.git
+git clone https://github.com/mizhab-as/Snake-Game.git
 cd snake_game
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
@@ -36,8 +36,13 @@ python src/main.py
 ```
 
 ### Option 2: Standalone Executable (macOS)
-- Download `SnakeGame.app` from [Releases](https://github.com/mizhab-as/snake_game/releases)
-- Extract and double-click to play
+- Download `SnakeGame.dmg` from [Releases](https://github.com/mizhab-as/Snake-Game/releases)
+- Double-click to mount, then drag `SnakeGame.app` to Applications
+- No Python installation required
+
+### Option 3: Standalone Executable (Windows)
+- Download `SnakeGame.exe` from [Releases](https://github.com/mizhab-as/Snake-Game/releases)
+- Double-click to play
 - No Python installation required
 
 ## How to Play
@@ -76,12 +81,23 @@ snake_game/
 ## Building Executable
 
 To create a standalone executable:
+
+**macOS:**
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name "SnakeGame" src/main.py
+pyinstaller SnakeGame.spec
 ```
 
-Output will be in `dist/SnakeGame.app` (macOS) or `dist/SnakeGame` (Windows/Linux)
+**Windows:**
+```bash
+pip install pyinstaller
+pyinstaller SnakeGame-Windows.spec
+```
+
+Output will be in the `dist/` folder. For macOS, create a `.dmg` installer:
+```bash
+hdiutil create -volname "SnakeGame" -srcfolder dist/SnakeGame.app -ov -format UDZO dist/SnakeGame.dmg
+```
 
 ## Contributing
 
