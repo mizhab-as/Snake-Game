@@ -1,8 +1,8 @@
 import pygame
 import random
 
-WIDTH, HEIGHT = 1280, 720
-BLOCK = 40
+WIDTH, HEIGHT = 1920, 1080
+BLOCK = 60
 PLAY_AREA_TOP = 120
 
 class GameMode:
@@ -179,10 +179,12 @@ class SnakeGame:
                 new_head = self.portal_b
                 self.spawn_particles(new_head[0], new_head[1], (100, 100, 255), 15)
                 self.teleported = True
+                self.reposition_portals = True
             elif new_head == self.portal_b:
                 new_head = self.portal_a
                 self.spawn_particles(new_head[0], new_head[1], (255, 150, 50), 15)
                 self.teleported = True
+                self.reposition_portals = True
 
         will_eat = new_head == self.food
         body_to_check = self.snake if will_eat else self.snake[:-1]
@@ -244,6 +246,10 @@ class SnakeGame:
         self.update_particles()
         self.update_power_ups()
         self.update_difficulty()
+        
+        if getattr(self, 'reposition_portals', False):
+            self.generate_portals()
+            self.reposition_portals = False
     
     def update_particles(self):
         for particle in self.particles[:]:
