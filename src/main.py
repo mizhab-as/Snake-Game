@@ -327,13 +327,10 @@ def update_screen_mode():
         display_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     elif mode == "FULLSCREEN":
         try:
-            display_screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
+            display_screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         except pygame.error:
-            try:
-                display_screen = pygame.display.set_mode((desktop_w, desktop_h), pygame.FULLSCREEN)
-            except pygame.error:
-                current_screen_mode_idx = 0
-                display_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+            current_screen_mode_idx = 0
+            display_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 def toggle_fullscreen():
     global current_screen_mode_idx
@@ -814,11 +811,11 @@ while running:
         # Base speed increases gradually in Classic/Arcade, stays relaxed in Zen
         if game.mode != GameMode.ZEN:
             starting_speed = 6.0
-            base_speed = 6.0 + (game.score / 50.0) + (game.play_time * 0.02)
+            base_speed = 6.0 + (game.play_time * 0.04)
             base_speed = min(base_speed, 18.0)
         else:
             starting_speed = 4.0
-            base_speed = 4.0 + (game.score / 150.0) + (game.play_time * 0.005)
+            base_speed = 4.0 + (game.play_time * 0.015)
             base_speed = min(base_speed, 12.0)
             
         speed = base_speed
