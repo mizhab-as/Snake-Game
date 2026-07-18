@@ -338,7 +338,12 @@ def update_screen_mode():
 def toggle_fullscreen():
     global current_screen_mode_idx
     current_screen_mode_idx = (current_screen_mode_idx + 1) % len(screen_modes)
-    update_screen_mode()
+    try:
+        success = pygame.display.toggle_fullscreen()
+        if not success:
+            update_screen_mode()
+    except:
+        update_screen_mode()
 
 def render_to_display(dx=0, dy=0):
     w, h = display_screen.get_size()
@@ -550,7 +555,7 @@ def draw_power_ups():
         power_text = tiny_font.render(label, True, (0, 0, 0))
         screen.blit(power_text, power_text.get_rect(center=(rect.centerx, rect.centery - 6)))
         
-        duration_ratio = frames_left / 300
+        duration_ratio = frames_left / 150
         bar_width = int(80 * duration_ratio)
         pygame.draw.rect(screen, (0, 150, 0), (rect.x + 10, rect.y + 22, bar_width, 4))
 

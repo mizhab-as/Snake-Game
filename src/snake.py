@@ -42,7 +42,7 @@ class PowerUp:
         self.x = x
         self.y = y
         self.type = power_type
-        self.duration = 300
+        self.duration = 150
         self.lifetime = 200
 
 class SnakeGame:
