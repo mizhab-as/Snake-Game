@@ -1,9 +1,9 @@
 import pygame
 import random
 
-WIDTH, HEIGHT = 1200, 800
-BLOCK = 20
-PLAY_AREA_TOP = 100
+WIDTH, HEIGHT = 1280, 720
+BLOCK = 40
+PLAY_AREA_TOP = 120
 
 class GameMode:
     CLASSIC = "classic"
@@ -35,47 +35,57 @@ class PowerUp:
     TYPE_SPEED_BOOST = "speed_boost"
     TYPE_SHIELD = "shield"
     TYPE_MULTIPLIER = "multiplier"
+    TYPE_GHOST = "ghost"
+    TYPE_FREEZE = "freeze"
     
     def __init__(self, x, y, power_type):
         self.x = x
         self.y = y
         self.type = power_type
         self.duration = 300
+        self.lifetime = 200
 
 class SnakeGame:
     
     def __init__(self, mode=GameMode.CLASSIC):
-        self.snake = [(WIDTH // 2, (HEIGHT + PLAY_AREA_TOP) // 2)]
+        self.mode = mode
+        self.snake = [(WIDTH // 2, ((HEIGHT + PLAY_AREA_TOP) // 2) // BLOCK * BLOCK)]
         self.direction = "RIGHT"
         self.next_direction = "RIGHT"
-        self.food = self.spawn_food()
+        self.portal_a = None
+        self.portal_b = None
+        self.food = None
         self.score = 0
         self.food_eaten = False
+        self.teleported = False
         self.game_over = False
         self.combo = 0
         self.difficulty = 1
         self.power_ups = []
         self.active_power_ups = {}
         self.food_streak = 0
-        self.mode = mode
         self.obstacles = []
         self.shield_active = False
         self.particles = []
+        self.play_time = 0.0
+        
         self.generate_obstacles()
+        self.generate_portals()
+        self.food = self.spawn_food()
 
     def spawn_food(self):
         while True:
             x = random.randrange(0, WIDTH, BLOCK)
             y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
-            if (x, y) not in self.snake:
+            if (x, y) not in self.snake and (x, y) != getattr(self, 'portal_a', None) and (x, y) != getattr(self, 'portal_b', None) and (x, y) not in self.obstacles:
                 return (x, y)
     
     def spawn_power_up(self):
         if random.random() > 0.8 and len(self.power_ups) < 3:
             x = random.randrange(0, WIDTH, BLOCK)
             y = random.randrange(PLAY_AREA_TOP, HEIGHT, BLOCK)
-            if (x, y) not in self.snake and (x, y) != self.food and (x, y) not in self.obstacles:
-                power_type = random.choice([PowerUp.TYPE_SPEED_BOOST, PowerUp.TYPE_MULTIPLIER, PowerUp.TYPE_SHIELD])
+            if (x, y) not in self.snake and (x, y) != self.food and (x, y) not in self.obstacles and (x, y) != getattr(self, 'portal_a', None) and (x, y) != getattr(self, 'portal_b', None):
+                power_type = random.choice([PowerUp.TYPE_SPEED_BOOST, PowerUp.TYPE_MULTIPLIER, PowerUp.TYPE_SHIELD, PowerUp.TYPE_GHOST, PowerUp.TYPE_FREEZE])
                 self.power_ups.append(PowerUp(x, y, power_type))
     
     def update_difficulty(self):
@@ -94,6 +104,13 @@ class SnakeGame:
             del self.active_power_ups[power_type]
             if power_type == PowerUp.TYPE_SHIELD:
                 self.shield_active = False
+
+        # Decrement and expire spawned power-ups on the grid
+        for power_up in self.power_ups[:]:
+            power_up.lifetime -= 1
+            if power_up.lifetime <= 0:
+                self.spawn_particles(power_up.x + BLOCK // 2, power_up.y + BLOCK // 2, (150, 150, 150), 10)
+                self.power_ups.remove(power_up)
     
     def generate_obstacles(self):
         self.obstacles = []
@@ -106,6 +123,21 @@ class SnakeGame:
                     if (x, y) not in self.snake and (x, y) != self.food:
                         self.obstacles.append((x, y))
                         break
+    
+    def generate_portals(self):
+        if self.mode == GameMode.ARCADE:
+            while True:
+                x = random.randrange(BLOCK, WIDTH - BLOCK, BLOCK)
+                y = random.randrange(PLAY_AREA_TOP + BLOCK, HEIGHT - BLOCK, BLOCK)
+                if (x, y) not in self.snake and (x, y) not in self.obstacles:
+                    self.portal_a = (x, y)
+                    break
+            while True:
+                x = random.randrange(BLOCK, WIDTH - BLOCK, BLOCK)
+                y = random.randrange(PLAY_AREA_TOP + BLOCK, HEIGHT - BLOCK, BLOCK)
+                if (x, y) not in self.snake and (x, y) not in self.obstacles and (x, y) != self.portal_a:
+                    self.portal_b = (x, y)
+                    break
     
     def spawn_particles(self, x, y, color, count=10):
         for _ in range(count):
@@ -142,11 +174,33 @@ class SnakeGame:
 
         new_head = (head_x, head_y)
 
+        if self.mode == GameMode.ARCADE and self.portal_a and self.portal_b:
+            if new_head == self.portal_a:
+                new_head = self.portal_b
+                self.spawn_particles(new_head[0], new_head[1], (100, 100, 255), 15)
+                self.teleported = True
+            elif new_head == self.portal_b:
+                new_head = self.portal_a
+                self.spawn_particles(new_head[0], new_head[1], (255, 150, 50), 15)
+                self.teleported = True
+
         will_eat = new_head == self.food
         body_to_check = self.snake if will_eat else self.snake[:-1]
         if new_head in body_to_check:
-            self.game_over = True
-            return
+            if PowerUp.TYPE_GHOST in self.active_power_ups:
+                pass
+            elif self.shield_active:
+                self.shield_active = False
+                self.active_power_ups.pop(PowerUp.TYPE_SHIELD, None)
+                self.spawn_particles(head_x, head_y, (0, 150, 255), 15)
+                self.snake.insert(0, new_head)
+                if len(self.snake) > 2:
+                    self.snake.pop()
+                    self.snake.pop()
+                return
+            else:
+                self.game_over = True
+                return
 
         if new_head in self.obstacles:
             if self.shield_active:

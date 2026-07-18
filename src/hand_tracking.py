@@ -3,8 +3,13 @@ import mediapipe as mp
 import math
 from collections import deque
 
-mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7)
+mp_hands = None
+hands = None
+try:
+    mp_hands = mp.solutions.hands
+    hands = mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7)
+except (AttributeError, ModuleNotFoundError):
+    pass
 
 hand_position_history = deque(maxlen=5)
 last_direction = None
@@ -51,7 +56,7 @@ def detect_gesture(hand):
 def get_direction(frame):
     global last_direction
     
-    if frame is None:
+    if frame is None or hands is None:
         return None, 0
     
     try:
@@ -111,7 +116,7 @@ def get_direction(frame):
 
 
 def get_hand_position(frame):
-    if frame is None:
+    if frame is None or hands is None:
         return None, None, None
     
     try:
