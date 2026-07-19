@@ -4,16 +4,20 @@ import json
 import os
 import numpy as np
 import random
+import math
 from datetime import datetime
 from snake import SnakeGame, PowerUp, GameMode, Particle, WIDTH, HEIGHT, PLAY_AREA_TOP, BLOCK
 from hand_tracking import get_direction, get_hand_position, hands
 
+os.environ['SDL_VIDEO_CENTERED'] = '1'
 pygame.init()
 SCREEN_WIDTH = WIDTH
 SCREEN_HEIGHT = HEIGHT
+WINDOW_WIDTH = 1280
+WINDOW_HEIGHT = 720
 screen_modes = ["WINDOWED", "FULLSCREEN"]
 current_screen_mode_idx = 0
-display_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+display_screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Snake Game - Hand Gesture Control")
 clock = pygame.time.Clock()
@@ -26,6 +30,7 @@ THEMES = {
         "glow": True,
         "corner_radius": 8,
         "grid_style": "line",
+        "head_shape": "square",
 
         "app_bg":     (10, 10, 11),
         "panel_bg":   (20, 20, 22),
@@ -44,32 +49,47 @@ THEMES = {
         "menu_row_bg_sel":     (26, 26, 29),
         "menu_row_border":     (42, 42, 45),
         "menu_row_border_sel": (240, 240, 242),
+        "menu_icon_bg":        (30, 30, 33),
+        "menu_icon_bg_sel":    (35, 35, 39),
+
+        "card_bg":     (18, 18, 20),
+        "card_border": (44, 44, 48),
+        "input_bg":    (14, 14, 16),
+        "rank_bg":     (26, 26, 29),
     },
     "retro": {
         "label": "Retro",
-        "font_name": "couriernew",
-        "scanlines": True,
+        "font_name": "arial",
+        "scanlines": False,
         "glow": False,
-        "corner_radius": 0,
-        "grid_style": "dots",
+        "corner_radius": 4,
+        "grid_style": "line",
+        "head_shape": "circle",
 
-        "app_bg":     (2, 4, 2),
-        "panel_bg":   (5, 10, 5),
-        "panel_edge": (18, 40, 18),
-        "board_bg":   (4, 9, 4),
-        "grid_line":  (14, 32, 14),
-        "snake_body": (40, 160, 60),
-        "snake_head": (140, 255, 160),
-        "food":       (140, 255, 160),
-        "text_main":  (140, 255, 160),
-        "text_sub":   (55, 130, 70),
-        "text_sub_sel": (90, 190, 105),
-        "accent":     (140, 255, 160),
+        "app_bg":     (13, 20, 17),
+        "panel_bg":   (19, 29, 24),
+        "panel_edge": (32, 46, 38),
+        "board_bg":   (199, 211, 185),
+        "grid_line":  (179, 193, 162),
+        "snake_body": (28, 38, 32),
+        "snake_head": (20, 28, 24),
+        "food":       (194, 59, 50),
+        "text_main":  (240, 244, 236),
+        "text_sub":   (140, 163, 148),
+        "text_sub_sel": (183, 199, 172),
+        "accent":     (194, 59, 50),
 
-        "menu_row_bg":         (6, 12, 6),
-        "menu_row_bg_sel":     (10, 20, 10),
-        "menu_row_border":     (20, 45, 20),
-        "menu_row_border_sel": (140, 255, 160),
+        "menu_row_bg":         (19, 29, 24),
+        "menu_row_bg_sel":     (25, 38, 31),
+        "menu_row_border":     (38, 54, 45),
+        "menu_row_border_sel": (240, 244, 236),
+        "menu_icon_bg":        (28, 42, 35),
+        "menu_icon_bg_sel":    (33, 48, 40),
+
+        "card_bg":     (17, 26, 21),
+        "card_border": (36, 51, 42),
+        "input_bg":    (13, 20, 17),
+        "rank_bg":     (24, 36, 29),
     },
 }
 
@@ -100,15 +120,19 @@ title_font = None
 font = None
 small_font = None
 tiny_font = None
+label_font = None
+stats_val_font = None
 
 def build_fonts():
-    global title_font, font, small_font, tiny_font
+    global title_font, font, small_font, tiny_font, label_font, stats_val_font
     th = THEMES[current_theme]
     name = th["font_name"]
     title_font = pygame.font.SysFont(name, 60, bold=True)
     font = pygame.font.SysFont(name, 36, bold=True)
     small_font = pygame.font.SysFont(name, 24, bold=True)
     tiny_font = pygame.font.SysFont(name, 18, bold=True)
+    label_font = pygame.font.SysFont(name, 16, bold=True)
+    stats_val_font = pygame.font.SysFont(name, 22, bold=True)
 
 def cycle_theme():
     global current_theme_index, current_theme
@@ -117,6 +141,24 @@ def cycle_theme():
     build_fonts()
 
 build_fonts()
+
+def draw_dim_overlay(alpha=150):
+    th = THEMES[current_theme]
+    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+    overlay.set_alpha(alpha)
+    overlay.fill(th["app_bg"])
+    screen.blit(overlay, (0, 0))
+
+def draw_card_frame(card_rect):
+    th = THEMES[current_theme]
+    radius = th["corner_radius"]
+    rounded_rect(screen, card_rect, th.get("card_bg", th["panel_bg"]), radius=radius)
+    if radius == 0:
+        pygame.draw.rect(screen, th.get("card_border", th["panel_edge"]), card_rect, width=1)
+    else:
+        pygame.draw.rect(screen, th.get("card_border", th["panel_edge"]), card_rect, width=1, border_radius=radius)
+    accent_rect = pygame.Rect(card_rect.x, card_rect.y, card_rect.width, 4)
+    rounded_rect(screen, accent_rect, th["accent"], radius=radius)
 
 # --- Audio Synthesis ---
 mixer_initialized = False
@@ -320,27 +362,17 @@ try:
 except:
     pass
 
-def update_screen_mode():
-    global display_screen, current_screen_mode_idx
-    mode = screen_modes[current_screen_mode_idx]
-    if mode == "WINDOWED":
-        display_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    elif mode == "FULLSCREEN":
-        try:
-            display_screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-        except pygame.error:
-            current_screen_mode_idx = 0
-            display_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-
 def toggle_fullscreen():
-    global current_screen_mode_idx
+    global display_screen, current_screen_mode_idx
     current_screen_mode_idx = (current_screen_mode_idx + 1) % len(screen_modes)
+    mode = screen_modes[current_screen_mode_idx]
     try:
-        success = pygame.display.toggle_fullscreen()
-        if not success:
-            update_screen_mode()
-    except:
-        update_screen_mode()
+        if mode == "WINDOWED":
+            display_screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        else:
+            display_screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    except Exception as e:
+        print(f"Fullscreen toggle failed: {e}")
 
 def render_to_display(dx=0, dy=0):
     w, h = display_screen.get_size()
@@ -451,27 +483,36 @@ def draw_stats(current_score, current_speed=10.0):
     best_lbl_rect = best_lbl.get_rect(topright=(SCREEN_WIDTH - 30, 48))
     screen.blit(best_lbl, best_lbl_rect)
     
-    # Stats Pill
-    stats_rect = pygame.Rect(SCREEN_WIDTH // 2 - 250, 56, 500, 32)
-    pill_bg = th["board_bg"]
-    rounded_rect(screen, stats_rect, pill_bg, radius=th["corner_radius"] * 2)
+    # Stats Pill - Nokia style stretched bar with vertical dividers (taller for readability)
+    stats_rect = pygame.Rect(18, 64, SCREEN_WIDTH - 36, 44)
+    stats_radius = th["corner_radius"]
+    rounded_rect(screen, stats_rect, th["board_bg"], radius=stats_radius)
+    if stats_radius == 0:
+        pygame.draw.rect(screen, th["panel_edge"], stats_rect, width=1)
+    else:
+        pygame.draw.rect(screen, th["panel_edge"], stats_rect, width=1, border_radius=stats_radius)
+        
+    val_color = th["snake_body"] if current_theme == "retro" else th["text_main"]
+    lbl_color = th["snake_head"] if current_theme == "retro" else th["text_sub"]
+    camera_color = (0, 120, 0) if current_theme == "retro" and camera_available else (180, 50, 40) if current_theme == "retro" else (100, 255, 100) if camera_available else (255, 100, 100)
     
     labels = [
-        ("SPEED", f"{current_speed:.1f}x"),
-        ("LENGTH", str(len(game.snake))),
-        ("MODE", game.mode.upper()),
-        ("CAMERA", "ON" if camera_available else "OFF")
+        ("SPEED", f"{current_speed:.1f}x", val_color),
+        ("LENGTH", str(len(game.snake)), val_color),
+        ("MODE", game.mode.upper(), val_color),
+        ("CAMERA", "ON" if camera_available else "OFF", camera_color)
     ]
-    seg_w = stats_rect.width / 4
-    for i, (lbl, val) in enumerate(labels):
+    seg_w = stats_rect.width / len(labels)
+    for i, (lbl, val, color) in enumerate(labels):
         cx = stats_rect.x + seg_w * i + seg_w / 2
-        text_str = f"{lbl}: {val}"
-        text_color = th["text_main"]
-        if lbl == "CAMERA":
-            text_color = (100, 255, 100) if camera_available else (255, 100, 100)
-            
-        v = tiny_font.render(text_str, True, text_color)
-        screen.blit(v, v.get_rect(center=(cx, stats_rect.y + 16)))
+        if i > 0:
+            divider_x = stats_rect.x + seg_w * i
+            pygame.draw.line(screen, th["panel_edge"],
+                              (divider_x, stats_rect.y + 6), (divider_x, stats_rect.bottom - 6), 1)
+        v = stats_val_font.render(val, True, color)
+        screen.blit(v, v.get_rect(center=(cx, stats_rect.y + 14)))
+        l = label_font.render(lbl, True, lbl_color)
+        screen.blit(l, l.get_rect(center=(cx, stats_rect.y + 30)))
 
 def draw_leaderboard():
     th = THEMES[current_theme]
@@ -646,7 +687,7 @@ def draw_mode_select():
         
         # Icon box on left
         icon_box = pygame.Rect(box_rect.x + 16, box_rect.y + 13, 48, 48)
-        icon_bg = th["menu_row_bg"] if is_selected else th["menu_row_bg_sel"]
+        icon_bg = th.get("menu_icon_bg_sel", th["menu_row_bg_sel"]) if is_selected else th.get("menu_icon_bg", th["menu_row_bg"])
         rounded_rect(screen, icon_box, icon_bg, radius=th["corner_radius"])
         
         icon_color = th["text_main"] if is_selected else th["text_sub"]
@@ -694,7 +735,9 @@ while running:
             elif event.key == pygame.K_c:
                 cycle_theme()
             elif show_mode_select:
-                if event.key == pygame.K_UP:
+                if event.key in (pygame.K_q, pygame.K_ESCAPE):
+                    running = False
+                elif event.key == pygame.K_UP:
                     selected_mode_index = (selected_mode_index - 1) % 3
                 elif event.key == pygame.K_DOWN:
                     selected_mode_index = (selected_mode_index + 1) % 3
@@ -740,6 +783,8 @@ while running:
                 if event.key in (pygame.K_p, pygame.K_ESCAPE):
                     paused = False
                     update_music()
+                elif event.key == pygame.K_q:
+                    running = False
                 elif event.key == pygame.K_m:
                     show_mode_select = True
                     selected_mode_index = 0
@@ -904,15 +949,19 @@ while running:
                 continue
                 
         # Skin Color & Shape selection
+        is_circle = th.get("head_shape") == "circle"
         if active_skin == "CHAMELEON":
             if th["glow"]:
                 if i == 0:
                     draw_glow(screen, rect.center, BLOCK * 0.5, th["snake_head"], layers=4, max_alpha=45)
-                    rounded_rect(screen, rect, th["snake_head"], radius=th["corner_radius"])
-                    dir_map = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0)}
-                    dx, dy = dir_map.get(game.direction, (1, 0))
-                    dot_pos = (rect.centerx + dx * 4, rect.centery + dy * 4)
-                    pygame.draw.circle(screen, th["board_bg"], dot_pos, 2)
+                    if is_circle:
+                        pygame.draw.circle(screen, th["snake_head"], rect.center, rect.width // 2)
+                    else:
+                        rounded_rect(screen, rect, th["snake_head"], radius=th["corner_radius"])
+                        dir_map = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0)}
+                        dx, dy = dir_map.get(game.direction, (1, 0))
+                        dot_pos = (rect.centerx + dx * 4, rect.centery + dy * 4)
+                        pygame.draw.circle(screen, th["board_bg"], dot_pos, 2)
                 else:
                     n = len(game.snake)
                     t_val = i / max(1, n - 1)
@@ -920,8 +969,11 @@ while running:
                     rounded_rect(screen, rect, fade, radius=th["corner_radius"])
             else:
                 color = th["accent"] if i == 0 else th["snake_body"]
-                rounded_rect(screen, rect, color, radius=th["corner_radius"])
-                if i == 0:
+                if i == 0 and is_circle:
+                    pygame.draw.circle(screen, color, rect.center, rect.width // 2)
+                else:
+                    rounded_rect(screen, rect, color, radius=th["corner_radius"])
+                if i == 0 and not is_circle:
                     dir_map = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0)}
                     dx, dy = dir_map.get(game.direction, (1, 0))
                     dot_pos = (rect.centerx + dx * 4, rect.centery + dy * 4)
@@ -930,35 +982,42 @@ while running:
             hue = (i * 15 + pygame.time.get_ticks() // 10) % 360
             color = pygame.Color(0)
             color.hsva = (hue, 100, 100, 100)
-            rounded_rect(screen, rect, color, radius=th["corner_radius"])
-            if i == 0:
+            if i == 0 and is_circle:
+                pygame.draw.circle(screen, color, rect.center, rect.width // 2)
+            else:
+                rounded_rect(screen, rect, color, radius=th["corner_radius"])
+            if i == 0 and not is_circle:
                 dir_map = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0)}
                 dx, dy = dir_map.get(game.direction, (1, 0))
                 dot_pos = (rect.centerx + dx * 4, rect.centery + dy * 4)
                 pygame.draw.circle(screen, th["board_bg"], dot_pos, 2)
         else: # NEON GLOW
             color = (50, 255, 50) if i == 0 else (0, 200, 0)
-            rounded_rect(screen, rect, color, radius=th["corner_radius"])
+            if i == 0 and is_circle:
+                pygame.draw.circle(screen, color, rect.center, rect.width // 2)
+            else:
+                rounded_rect(screen, rect, color, radius=th["corner_radius"])
             if i > 0:
                 core_color = (180, 255, 180)
                 pygame.draw.rect(screen, core_color, (rect.x + 6, rect.y + 6, rect.width - 12, rect.height - 12), border_radius=th["corner_radius"])
-            if i == 0:
+            if i == 0 and not is_circle:
                 dir_map = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0)}
                 dx, dy = dir_map.get(game.direction, (1, 0))
                 dot_pos = (rect.centerx + dx * 4, rect.centery + dy * 4)
                 pygame.draw.circle(screen, th["board_bg"], dot_pos, 2)
 
     food_x, food_y = game.food
+    cx = food_x + BLOCK // 2
+    cy = food_y + BLOCK // 2
+    pulse = (math.sin(pygame.time.get_ticks() / 150.0) + 1.0) / 2.0
     if th["glow"]:
-        import math
-        cx = food_x + BLOCK // 2
-        cy = food_y + BLOCK // 2
-        pulse = (math.sin(pygame.time.get_ticks() / 150.0) + 1.0) / 2.0
         radius = BLOCK / 2 - 6 + pulse * 2
         draw_glow(screen, (cx, cy), radius, th["food"], layers=5, max_alpha=55)
         pygame.draw.circle(screen, th["food"], (cx, cy), int(radius))
     else:
-        rect_food = pygame.Rect(food_x + 4, food_y + 4, BLOCK - 8, BLOCK - 8)
+        # Pulsing size for retro block food
+        size_offset = 4 - int(pulse * 2)
+        rect_food = pygame.Rect(food_x + size_offset, food_y + size_offset, BLOCK - size_offset * 2, BLOCK - size_offset * 2)
         rounded_rect(screen, rect_food, th["food"], radius=th["corner_radius"])
 
     for power_up in game.power_ups:
@@ -997,78 +1056,86 @@ while running:
                 pygame.draw.circle(screen, gesture_color, (hand_pixel_x, hand_pixel_y), 10, 1)
 
     if entering_name:
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        overlay.set_alpha(220)
-        overlay.fill(th["app_bg"])
-        screen.blit(overlay, (0, 0))
+        draw_dim_overlay(180)
+        card_w, card_h = 360, 260
+        card_rect = pygame.Rect(SCREEN_WIDTH // 2 - card_w // 2, SCREEN_HEIGHT // 2 - card_h // 2 + 20, card_w, card_h)
+        draw_card_frame(card_rect)
         
-        title_text = title_font.render("ENTER YOUR NAME", True, th["accent"])
-        title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 100))
-        screen.blit(title_text, title_rect)
+        title_text = font.render("New High Score!", True, th["accent"])
+        screen.blit(title_text, title_text.get_rect(center=(card_rect.centerx, card_rect.y + 40)))
         
-        score_text = font.render(f"Score: {game.score}", True, th["text_main"])
-        score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 20))
-        screen.blit(score_text, score_rect)
+        score_text = small_font.render(f"Score: {game.score}", True, th["text_main"])
+        screen.blit(score_text, score_text.get_rect(center=(card_rect.centerx, card_rect.y + 90)))
         
-        input_box = pygame.Rect(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 + 30, 300, 50)
-        rounded_rect(screen, input_box, th["panel_bg"], radius=th["corner_radius"])
-        pygame.draw.rect(screen, th["accent"], input_box, 2, border_radius=th["corner_radius"])
-        name_display = font.render(player_name + "|", True, th["text_main"])
-        screen.blit(name_display, (input_box.x + 10, input_box.y + 10))
+        input_box = pygame.Rect(card_rect.x + 30, card_rect.y + 130, card_w - 60, 48)
+        input_radius = th["corner_radius"]
+        rounded_rect(screen, input_box, th.get("input_bg", th["panel_bg"]), radius=input_radius)
+        if input_radius == 0:
+            pygame.draw.rect(screen, th["accent"], input_box, width=1)
+        else:
+            pygame.draw.rect(screen, th["accent"], input_box, width=1, border_radius=input_radius)
+        name_display = small_font.render(player_name + "|", True, th["text_main"])
+        name_rect = name_display.get_rect(center=input_box.center)
+        screen.blit(name_display, name_rect)
         
-        hint_text = small_font.render("Press ENTER to submit", True, th["text_sub"])
-        hint_rect = hint_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 120))
-        screen.blit(hint_text, hint_rect)
+        hint_text = tiny_font.render("Press ENTER to submit", True, th["text_sub"])
+        screen.blit(hint_text, hint_text.get_rect(center=(card_rect.centerx, card_rect.y + 210)))
     elif game_over:
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        overlay.set_alpha(200)
-        overlay.fill(th["app_bg"])
-        screen.blit(overlay, (0, 0))
+        draw_dim_overlay(160)
+        card_w, card_h = 400, 340
+        card_rect = pygame.Rect(SCREEN_WIDTH // 2 - card_w // 2, SCREEN_HEIGHT // 2 - card_h // 2 + 20, card_w, card_h)
+        draw_card_frame(card_rect)
         
-        game_over_text = title_font.render("GAME OVER!", True, th["accent"])
-        text_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 180))
-        screen.blit(game_over_text, text_rect)
+        title_text = font.render("Game Over", True, th["accent"])
+        screen.blit(title_text, title_text.get_rect(center=(card_rect.centerx, card_rect.y + 35)))
         
-        final_score = font.render(f"Final Score: {game.score}", True, th["text_main"])
-        score_rect = final_score.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 90))
-        screen.blit(final_score, score_rect)
+        score_str = f"Final Score: {game.score}"
+        if game.score >= high_score and game.score > 0:
+            score_str += "  (NEW BEST!)"
+        score_txt = small_font.render(score_str, True, th["text_main"])
+        screen.blit(score_txt, score_txt.get_rect(center=(card_rect.centerx, card_rect.y + 80)))
         
-        if game.score >= high_score:
-            new_high = small_font.render("*** NEW HIGH SCORE! ***", True, th["accent"])
-            new_high_rect = new_high.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
-            screen.blit(new_high, new_high_rect)
-            
-        # Draw top 3 high scores for the current game mode
+        # Leaderboard sub-list inside card
         modes_leaderboard = load_leaderboard(game.mode)
+        start_y = card_rect.y + 115
         if modes_leaderboard:
-            scores_title = small_font.render("TOP SCORES FOR THIS MODE:", True, th["accent"])
-            screen.blit(scores_title, scores_title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 10)))
+            scores_title = tiny_font.render("TOP SCORES FOR THIS MODE:", True, th["text_sub"])
+            screen.blit(scores_title, (card_rect.x + 35, start_y))
             for idx, entry in enumerate(modes_leaderboard[:3]):
-                score_str = f"#{idx+1}  {entry['name'][:10]}  -  {entry['score']}"
-                score_line = small_font.render(score_str, True, th["text_main"])
-                screen.blit(score_line, score_line.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 40 + idx * 25)))
-        
-        menu_text = small_font.render("M: Main Menu  |  R: Restart  |  Q: Quit", True, th["text_sub"])
-        menu_rect = menu_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 150))
-        screen.blit(menu_text, menu_rect)
- 
-    if show_leaderboard:
+                rank_y = start_y + 25 + idx * 24
+                rank_bg_rect = pygame.Rect(card_rect.x + 30, rank_y - 2, card_w - 60, 22)
+                rank_radius = th["corner_radius"]
+                rounded_rect(screen, rank_bg_rect, th.get("rank_bg", th["board_bg"]), radius=rank_radius)
+                if rank_radius == 0:
+                    pygame.draw.rect(screen, th["panel_edge"], rank_bg_rect, width=1)
+                else:
+                    pygame.draw.rect(screen, th["panel_edge"], rank_bg_rect, width=1, border_radius=rank_radius)
+                
+                num_txt = tiny_font.render(f"#{idx+1}", True, th["accent"])
+                screen.blit(num_txt, (card_rect.x + 40, rank_y))
+                name_txt = tiny_font.render(entry['name'][:10], True, th["text_main"])
+                screen.blit(name_txt, (card_rect.x + 80, rank_y))
+                val_txt = tiny_font.render(str(entry['score']), True, th["text_main"])
+                screen.blit(val_txt, val_txt.get_rect(topright=(card_rect.right - 40, rank_y)))
+                
+        menu_text = tiny_font.render("M: Menu   |   R: Restart   |   Q: Quit", True, th["text_sub"])
+        screen.blit(menu_text, menu_text.get_rect(center=(card_rect.centerx, card_rect.bottom - 25)))
+    elif show_leaderboard:
         draw_leaderboard()
     elif paused:
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        overlay.set_alpha(180)
-        overlay.fill(th["app_bg"])
-        screen.blit(overlay, (0, 0))
+        draw_dim_overlay(120)
+        card_w, card_h = 320, 200
+        card_rect = pygame.Rect(SCREEN_WIDTH // 2 - card_w // 2, SCREEN_HEIGHT // 2 - card_h // 2 + 20, card_w, card_h)
+        draw_card_frame(card_rect)
         
-        pause_title = title_font.render("GAME PAUSED", True, th["accent"])
-        pause_title_rect = pause_title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
-        screen.blit(pause_title, pause_title_rect)
+        pause_title = font.render("Paused", True, th["text_main"])
+        screen.blit(pause_title, pause_title.get_rect(center=(card_rect.centerx, card_rect.y + 40)))
         
-        pause_desc1 = font.render("P / ESC to Resume", True, th["text_main"])
-        screen.blit(pause_desc1, pause_desc1.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20)))
+        pause_desc1 = small_font.render("P / ESC to resume", True, th["text_main"])
+        screen.blit(pause_desc1, pause_desc1.get_rect(center=(card_rect.centerx, card_rect.y + 100)))
         
-        pause_desc2 = small_font.render("M to return to Main Menu", True, th["text_sub"])
-        screen.blit(pause_desc2, pause_desc2.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 80)))
+        pause_desc2 = tiny_font.render("M to return to Main Menu", True, th["text_sub"])
+        screen.blit(pause_desc2, pause_desc2.get_rect(center=(card_rect.centerx, card_rect.y + 150)))
     elif show_gesture_help and not game_over:
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         overlay.set_alpha(200)

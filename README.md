@@ -1,20 +1,27 @@
 # Snake Game with Hand Gesture Control
 
-A Snake game with hand gesture control using computer vision. Features multiple game modes, leaderboard system, and power-ups.
+A Snake game with hand gesture control using computer vision. Features multiple game modes, leaderboard system, power-ups, and a gorgeous dual-theme design system.
 
 ## Features
 
+### Dual Themes (Toggled with **C**)
+- **Modern**: Charcoal matte dark layout, rounded corners, soft glowing outline borders, and size-pulsing food.
+- **Retro**: Nokia LCD style featuring a sage green board, high-contrast near-black snake body segments, circle snake head, and size-pulsing blocky retro food.
+
 ### Game Modes
 - **Classic**: Traditional snake with wrapping borders
-- **Arcade**: Obstacles that increase with difficulty
-- **Zen**: No death, infinite gameplay
+- **Arcade**: Obstacles, portals, and dynamic challenges that increase with difficulty
+- **Zen**: No death, relaxed speed, and infinite gameplay
 
 ### Controls
-- **Hand Gestures**: Move your hand up/down/left/right to control snake
-- **Keyboard**: Arrow keys or WASD
-- Press **H** for help, **L** for leaderboard, **R** to restart, **M** for main menu, **Q** to quit
+- **Hand Gestures**: Move your hand up/down/left/right to control snake (requires camera)
+- **Keyboard**: Arrow keys or WASD keys
+- Press **C** to cycle theme, **H** for gesture help, **L** for leaderboard, **R** to restart, **M** for main menu, **Q** or **ESC** to quit/exit the game instantly.
 
-### Gameplay
+### Gameplay & UI Polish
+- **Segmented Stats Panel**: Taller, high-contrast, segmented stats panel displaying Speed, Length, Mode, and Camera state with zero text overlap.
+- **Card-Style Dialog Popups**: Centered dialog boxes for Pause, High Score name entry, and Game Over.
+- **Centered Name Entry**: Player name and cursor are perfectly centered inside the leaderboard name input field.
 - Power-ups: Speed Boost, Score Multiplier (2x), Shield
 - Progressive difficulty increases every 200 points
 - Combo system tracks consecutive food eaten
@@ -37,26 +44,21 @@ A Snake game with hand gesture control using computer vision. Features multiple 
 
 ## Installation
 
-Requires Python 3.8+ and a webcam (optional for hand tracking).
+Requires Python 3.10+ and a webcam (optional for hand tracking).
 
-### Option 1: From Source
+### Option 1: Run From Source
 ```bash
 git clone https://github.com/mizhab-as/Snake-Game.git
-cd snake_game
+cd Snake-Game
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+venv\Scripts\activate      # On Windows
+source venv/bin/activate   # On macOS/Linux
 pip install -r requirements.txt
 python src/main.py
 ```
 
-### Option 2: Standalone Executable (macOS)
-- Download `SnakeGame.dmg` from [Releases](https://github.com/mizhab-as/Snake-Game/releases)
-- Double-click to mount, then drag `SnakeGame.app` to Applications
-- No Python installation required
-
-### Option 3: Standalone Executable (Windows)
-- Download `SnakeGame.exe` from [Releases](https://github.com/mizhab-as/Snake-Game/releases)
-- Double-click to play
+### Option 2: Standalone Windows Executable
+- Run `dist/SnakeGame.exe` directly
 - No Python installation required
 
 ## How to Play
@@ -92,26 +94,34 @@ snake_game/
 - Power-up: 50 points
 - Combo system for consecutive food
 
-## Building Executable
+## Building Executable (Windows)
 
-To create a standalone executable:
+To bundle the game into a standalone `.exe` executable:
 
-**macOS:**
-```bash
-pip install pyinstaller
-pyinstaller SnakeGame.spec
-```
+1. Activate your virtual environment and install PyInstaller:
+   ```bash
+   venv\Scripts\activate
+   pip install pyinstaller
+   ```
+2. Build the executable using the spec file:
+   ```bash
+   pyinstaller --clean SnakeGame-Windows.spec
+   ```
+The standalone executable will be generated at `dist/SnakeGame.exe`.
 
-**Windows:**
-```bash
-pip install pyinstaller
-pyinstaller SnakeGame-Windows.spec
-```
+## Uploading to GitHub
 
-Output will be in the `dist/` folder. For macOS, create a `.dmg` installer:
-```bash
-hdiutil create -volname "SnakeGame" -srcfolder dist/SnakeGame.app -ov -format UDZO dist/SnakeGame.dmg
-```
+To share your game on your GitHub page:
+1. Commit and push your code updates:
+   ```bash
+   git add .
+   git commit -m "Add dual themes, HUD improvements, and bug fixes"
+   git push origin main
+   ```
+2. Go to your repository on GitHub.
+3. Click on **Releases** -> **Create a new release**.
+4. Drag and drop the built `dist/SnakeGame.exe` file into the release binaries box.
+5. Publish the release so players can download and run it directly!
 
 ## Contributing
 
