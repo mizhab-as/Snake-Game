@@ -334,8 +334,41 @@ high_score = initial_leaderboard[0]['score'] if initial_leaderboard else 0
 game_mode = GameMode.CLASSIC
 selected_mode_index = 0
 game = SnakeGame(mode=game_mode)
-cap = cv2.VideoCapture(0) if hands is not None else None
-camera_available = cap is not None and cap.isOpened() and cap.get(cv2.CAP_PROP_FRAME_WIDTH) > 0
+cap = None
+camera_available = False
+latest_frame = None
+show_camera_preview = False
+show_camera_error = False
+camera_error_timer = 0.0
+
+def initialize_camera():
+    global cap, camera_available
+    if hands is None:
+        camera_available = False
+        return False
+    try:
+        if cap is not None:
+            cap.release()
+        cap = cv2.VideoCapture(0)
+        if cap is not None and cap.isOpened():
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            camera_available = True
+            return True
+    except:
+        pass
+    camera_available = False
+    cap = None
+    return False
+
+def close_camera():
+    global cap, camera_available
+    if cap is not None:
+        cap.release()
+        cap = None
+    camera_available = False
+
+initialize_camera()
 
 direction_queue = []
 move_timer = 0.0
@@ -618,6 +651,39 @@ def draw_obstacles():
         rounded_rect(screen, rect, obs_color, radius=th["corner_radius"])
         pygame.draw.rect(screen, border_color, (obs_x, obs_y, BLOCK, BLOCK), 1)
 
+def draw_camera_preview():
+    if not camera_available or latest_frame is None or not show_camera_preview:
+        return
+    try:
+        # Convert BGR frame from OpenCV to RGB
+        rgb_frame = cv2.cvtColor(latest_frame, cv2.COLOR_BGR2RGB)
+        # Mirror frame for natural self-view
+        rgb_frame = cv2.flip(rgb_frame, 1)
+        # Resize to 320x240 for preview card
+        preview_w, preview_h = 320, 240
+        resized = cv2.resize(rgb_frame, (preview_w, preview_h))
+        # Convert numpy array to pygame surface
+        cam_surf = pygame.surfarray.make_surface(resized.swapaxes(0, 1))
+        
+        # Position card in the bottom-right corner
+        card_w, card_h = 340, 290
+        card_rect = pygame.Rect(SCREEN_WIDTH - card_w - 20, SCREEN_HEIGHT - card_h - 20, card_w, card_h)
+        draw_card_frame(card_rect)
+        
+        # Blit camera feed surface
+        screen.blit(cam_surf, (card_rect.x + 10, card_rect.y + 10))
+        
+        # Add visual label for hand detection status
+        th = THEMES[current_theme]
+        hand_x, hand_y, gesture = get_hand_position(latest_frame)
+        status_text = f"HAND ACTIVE ({gesture})" if hand_x is not None else "NO HAND DETECTED"
+        status_color = (100, 255, 100) if hand_x is not None else th["text_sub"]
+        
+        lbl = tiny_font.render(status_text, True, status_color)
+        screen.blit(lbl, lbl.get_rect(center=(card_rect.centerx, card_rect.y + 265)))
+    except Exception as e:
+        print(f"Error drawing camera preview: {e}")
+
 def draw_particles():
     for particle in game.particles:
         particle.draw(screen)
@@ -720,7 +786,8 @@ def draw_mode_select():
         f"[C] Theme: {th['label']}",
         f"[S] Skin: {active_skin}",
         f"[M] Music: {'ON' if music_active else 'OFF'}",
-        f"[F] Screen: {mode_str}"
+        f"[F] Screen: {mode_str}",
+        f"[V] Camera: {'ON' if camera_available else 'OFF'}"
     ]
     draw_pills(settings_labels, card_y + 490)
 
@@ -747,6 +814,14 @@ while running:
                     toggle_music()
                 elif event.key == pygame.K_f:
                     toggle_fullscreen()
+                elif event.key == pygame.K_v:
+                    if camera_available:
+                        close_camera()
+                    else:
+                        initialize_camera()
+                        if not camera_available:
+                            show_camera_error = True
+                            camera_error_timer = 3.0
                 elif event.key == pygame.K_RETURN:
                     modes_list = [GameMode.CLASSIC, GameMode.ARCADE, GameMode.ZEN]
                     game_mode = modes_list[selected_mode_index]
@@ -824,16 +899,48 @@ while running:
                     update_music()
                 elif event.key == pygame.K_h:
                     show_gesture_help = not show_gesture_help
+                elif event.key == pygame.K_v:
+                    if camera_available:
+                        show_camera_preview = not show_camera_preview
+                    else:
+                        initialize_camera()
+                        if not camera_available:
+                            show_camera_error = True
+                            camera_error_timer = 3.0
+                        else:
+                            show_camera_preview = True
                 elif event.key == pygame.K_l:
                     show_leaderboard = True
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1: # Left click
+                mx, my = event.pos
+                w, h = display_screen.get_size()
+                logical_mx = int(mx * (SCREEN_WIDTH / w))
+                logical_my = int(my * (SCREEN_HEIGHT / h))
+                
+                stats_rect = pygame.Rect(18, 64, SCREEN_WIDTH - 36, 44)
+                if stats_rect.collidepoint(logical_mx, logical_my):
+                    seg_w = stats_rect.width / 4
+                    clicked_segment = int((logical_mx - stats_rect.x) / seg_w)
+                    if clicked_segment == 3: # CAMERA segment
+                        if camera_available:
+                            show_camera_preview = not show_camera_preview
+                        else:
+                            initialize_camera()
+                            if not camera_available:
+                                show_camera_error = True
+                                camera_error_timer = 3.0
+                            else:
+                                show_camera_preview = True
 
     if shake_duration > 0:
         shake_duration -= dt
 
-    if not game_over and not show_mode_select and not paused:
-        if camera_available:
-            ret, frame = cap.read()
-            if ret and frame is not None:
+    if camera_available and cap is not None:
+        ret, frame = cap.read()
+        if ret and frame is not None:
+            latest_frame = frame
+            if not game_over and not show_mode_select and not paused:
                 direction, confidence = get_direction(frame)
                 if direction:
                     if direction == "LEFT":
@@ -845,6 +952,8 @@ while running:
                 hand_x, hand_y, gesture_type = get_hand_position(frame)
                 if confidence:
                     hand_confidence = confidence
+
+    if not game_over and not show_mode_select and not paused:
 
         move_timer += dt
         
@@ -1163,6 +1272,22 @@ while running:
     # Theme Hint at bottom left
     theme_hint = tiny_font.render(f"[C] Theme: {th['label']}", True, th["text_sub"])
     screen.blit(theme_hint, (20, SCREEN_HEIGHT - 30))
+
+    # Live Webcam Feed and Connection Status Alert
+    draw_camera_preview()
+    
+    if show_camera_error:
+        camera_error_timer -= dt
+        if camera_error_timer <= 0:
+            show_camera_error = False
+        alert_w, alert_h = 440, 80
+        alert_rect = pygame.Rect(SCREEN_WIDTH // 2 - alert_w // 2, PLAY_AREA_TOP + 20, alert_w, alert_h)
+        rounded_rect(screen, alert_rect, th["panel_bg"], radius=th["corner_radius"])
+        pygame.draw.rect(screen, (220, 50, 50), alert_rect, width=2, border_radius=th["corner_radius"])
+        err_txt = small_font.render("No Webcam Detected!", True, (220, 50, 50))
+        sub_txt = tiny_font.render("Connect a camera and press V to try again.", True, th["text_main"])
+        screen.blit(err_txt, err_txt.get_rect(center=(alert_rect.centerx, alert_rect.y + 25)))
+        screen.blit(sub_txt, sub_txt.get_rect(center=(alert_rect.centerx, alert_rect.y + 55)))
 
     if th["scanlines"]:
         overlay_lines = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
