@@ -847,7 +847,7 @@ def draw_settings():
     screen.fill(th["app_bg"])
     
     card_w = 880
-    card_h = 660
+    card_h = 720
     card_x = SCREEN_WIDTH // 2 - card_w // 2
     card_y = SCREEN_HEIGHT // 2 - card_h // 2
     card_rect = pygame.Rect(card_x, card_y, card_w, card_h)
@@ -872,20 +872,21 @@ def draw_settings():
     
     mode_str = screen_modes[current_screen_mode_idx]
     settings_items = [
-        ("Theme",         "C", th["label"]),
-        ("Skin",          "S", active_skin),
-        ("Music",         "M", "ON" if music_active else "OFF"),
-        ("Screen",        "F", mode_str),
-        ("Resolution",    "P", f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}"),
-        ("Camera",        "V", "ON" if camera_available else "OFF"),
-        ("Camera source", "O", str(camera_index)),
-        ("Tracker",       "T", "ON" if show_motion_tracker else "OFF")
+        ("Theme",          "C", th["label"]),
+        ("Skin",           "S", active_skin),
+        ("Music",          "M", "ON" if music_active else "OFF"),
+        ("Screen",         "F", mode_str),
+        ("Resolution",     "P", f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}"),
+        ("Camera",         "V", "ON" if camera_available else "OFF"),
+        ("Camera Preview", "B", "ON" if show_camera_preview else "OFF"),
+        ("Camera source",  "O", str(camera_index)),
+        ("Tracker",        "T", "ON" if show_motion_tracker else "OFF")
     ]
     
     row_w = 720
     row_h = 46
-    start_y = card_y + 165
-    spacing = 54
+    start_y = card_y + 145
+    spacing = 60
     
     for i, (label, key, val) in enumerate(settings_items):
         y = start_y + (i * spacing)
@@ -1038,6 +1039,10 @@ while running:
                 elif event.key == pygame.K_t:
                     show_motion_tracker = not show_motion_tracker
                     play_sound("powerup")
+                elif event.key == pygame.K_b:
+                    if show_settings:
+                        show_camera_preview = not show_camera_preview
+                        play_sound("powerup")
 
                 # Screen-specific navigation / transitions
                 elif show_mode_select:

@@ -1,3 +1,12 @@
+import sys
+import os
+
+# When running inside a PyInstaller bundle, mediapipe cannot find its model files
+# unless we point it to the correct extracted location (_MEIPASS).
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    _mediapipe_path = os.path.join(sys._MEIPASS, 'mediapipe')
+    os.environ.setdefault('MEDIAPIPE_RESOURCE_DIR', _mediapipe_path)
+
 import cv2
 import mediapipe as mp
 import math
@@ -8,7 +17,7 @@ hands = None
 try:
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
-except (AttributeError, ModuleNotFoundError):
+except Exception:
     pass
 
 hand_position_history = deque(maxlen=10)  # Increased to 10 for better noise filtering
