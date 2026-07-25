@@ -15,6 +15,15 @@ SCREEN_WIDTH = WIDTH
 SCREEN_HEIGHT = HEIGHT
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
+RESOLUTIONS = [
+    (1280, 720),
+    (1366, 768),
+    (1440, 900),
+    (1600, 900),
+    (1920, 1080),
+    (2560, 1440)
+]
+current_res_idx = 0
 screen_modes = ["WINDOWED", "FULLSCREEN"]
 current_screen_mode_idx = 0
 display_screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -122,9 +131,11 @@ small_font = None
 tiny_font = None
 label_font = None
 stats_val_font = None
+menu_name_font = None
+menu_desc_font = None
 
 def build_fonts():
-    global title_font, font, small_font, tiny_font, label_font, stats_val_font
+    global title_font, font, small_font, tiny_font, label_font, stats_val_font, menu_name_font, menu_desc_font
     th = THEMES[current_theme]
     name = th["font_name"]
     title_font = pygame.font.SysFont(name, 60, bold=True)
@@ -133,6 +144,8 @@ def build_fonts():
     tiny_font = pygame.font.SysFont(name, 18, bold=True)
     label_font = pygame.font.SysFont(name, 16, bold=True)
     stats_val_font = pygame.font.SysFont(name, 22, bold=True)
+    menu_name_font = pygame.font.SysFont(name, 32, bold=True)
+    menu_desc_font = pygame.font.SysFont(name, 20, bold=False)
 
 def cycle_theme():
     global current_theme_index, current_theme
@@ -336,27 +349,48 @@ selected_mode_index = 0
 game = SnakeGame(mode=game_mode)
 cap = None
 camera_available = False
+camera_index = 0
 latest_frame = None
 show_camera_preview = False
 show_camera_error = False
 camera_error_timer = 0.0
 
-def initialize_camera():
-    global cap, camera_available
+def initialize_camera(index=None):
+    global cap, camera_available, camera_index
     if hands is None:
         camera_available = False
         return False
-    try:
-        if cap is not None:
-            cap.release()
-        cap = cv2.VideoCapture(0)
-        if cap is not None and cap.isOpened():
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            camera_available = True
-            return True
-    except:
-        pass
+    
+    indices_to_try = []
+    if index is not None:
+        indices_to_try.append(index)
+    else:
+        indices_to_try.append(camera_index)
+        for i in range(5):
+            if i != camera_index:
+                indices_to_try.append(i)
+                
+    for idx in indices_to_try:
+        try:
+            if cap is not None:
+                cap.release()
+            import sys
+            if sys.platform == "darwin":
+                cap = cv2.VideoCapture(idx, cv2.CAP_AVFOUNDATION)
+            else:
+                cap = cv2.VideoCapture(idx)
+            if cap is not None and cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    camera_index = idx  # Keep track of the working index
+                    camera_available = True
+                    return True
+                cap.release()
+        except:
+            pass
+            
     camera_available = False
     cap = None
     return False
@@ -407,13 +441,23 @@ def toggle_fullscreen():
     except Exception as e:
         print(f"Fullscreen toggle failed: {e}")
 
+def cycle_resolution():
+    global current_res_idx, WINDOW_WIDTH, WINDOW_HEIGHT, display_screen
+    current_res_idx = (current_res_idx + 1) % len(RESOLUTIONS)
+    WINDOW_WIDTH, WINDOW_HEIGHT = RESOLUTIONS[current_res_idx]
+    if screen_modes[current_screen_mode_idx] == "WINDOWED":
+        try:
+            display_screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        except Exception as e:
+            print(f"Failed to change resolution: {e}")
+
 def render_to_display(dx=0, dy=0):
     w, h = display_screen.get_size()
     display_screen.fill((0, 0, 0))
     if (w, h) == (SCREEN_WIDTH, SCREEN_HEIGHT):
         display_screen.blit(screen, (dx, dy))
     else:
-        scaled = pygame.transform.scale(screen, (w, h))
+        scaled = pygame.transform.smoothscale(screen, (w, h))
         sdx = int(dx * (w / SCREEN_WIDTH))
         sdy = int(dy * (h / SCREEN_HEIGHT))
         display_screen.blit(scaled, (sdx, sdy))
@@ -459,6 +503,8 @@ game_over = False
 show_gesture_help = False
 show_leaderboard = False
 show_mode_select = True
+show_settings = False
+show_motion_tracker = True
 player_name = ""
 entering_name = False
 gesture_type = None
@@ -690,17 +736,172 @@ def draw_particles():
 
 def draw_pills(labels, y):
     th = THEMES[current_theme]
-    pad_x = 12
-    gap = 10
-    surfs = [tiny_font.render(l, True, th["text_sub"]) for l in labels]
-    widths = [s.get_width() + pad_x * 2 for s in surfs]
-    total_w = sum(widths) + gap * (len(widths) - 1)
+    gap = 24  # gap between pills
+    
+    parsed_items = []
+    for label in labels:
+        parts = label.split(" ", 1)
+        if len(parts) == 2:
+            key, action = parts[0], parts[1]
+        else:
+            key, action = parts[0], ""
+            
+        key_surf = tiny_font.render(key, True, th["text_main"])
+        action_surf = tiny_font.render(action, True, th["text_sub"]) if action else None
+        
+        keycap_w = key_surf.get_width() + 16
+        keycap_h = 26
+        
+        pill_w = keycap_w
+        if action_surf:
+            pill_w += 8 + action_surf.get_width()
+            
+        parsed_items.append({
+            "key_surf": key_surf,
+            "action_surf": action_surf,
+            "keycap_w": keycap_w,
+            "keycap_h": keycap_h,
+            "pill_w": pill_w
+        })
+        
+    total_w = sum(item["pill_w"] for item in parsed_items) + gap * (len(parsed_items) - 1)
     x = SCREEN_WIDTH // 2 - total_w // 2
-    for s, w in zip(surfs, widths):
-        pill_rect = pygame.Rect(x, y, w, 28)
-        rounded_rect(screen, pill_rect, th["menu_row_bg"], radius=max(2, th["corner_radius"] - 2))
-        screen.blit(s, s.get_rect(center=pill_rect.center))
-        x += w + gap
+    
+    for item in parsed_items:
+        # Draw keycap box
+        keycap_rect = pygame.Rect(x, y + 1, item["keycap_w"], item["keycap_h"])
+        rounded_rect(screen, keycap_rect, th["menu_row_bg_sel"], radius=5)
+        pygame.draw.rect(screen, th["menu_row_border"], keycap_rect, 1, border_radius=5)
+        
+        # Center key text in keycap
+        screen.blit(item["key_surf"], item["key_surf"].get_rect(center=keycap_rect.center))
+        
+        # Draw action label side-by-side
+        if item["action_surf"]:
+            screen.blit(item["action_surf"], (x + item["keycap_w"] + 8, y + 14 - item["action_surf"].get_height() // 2))
+            
+        x += item["pill_w"] + gap
+
+def draw_icon(surface, kind, rect, color):
+    cx, cy = rect.center
+    if kind == "classic":       # filled dot, radio-style
+        pygame.draw.circle(surface, color, (cx, cy), int(rect.width * 0.22))
+    elif kind == "arcade":      # outlined square
+        r = pygame.Rect(0, 0, int(rect.width * 0.5), int(rect.width * 0.5))
+        r.center = (cx, cy)
+        pygame.draw.rect(surface, color, r, width=2, border_radius=3)
+    elif kind == "zen":         # infinity, built from two circles
+        r = int(rect.width * 0.14)
+        pygame.draw.circle(surface, color, (cx - r, cy), r, width=2)
+        pygame.draw.circle(surface, color, (cx + r, cy), r, width=2)
+    elif kind == "settings_gear":
+        r = int(rect.width * 0.22)
+        pygame.draw.circle(surface, color, (cx, cy), r, width=2)
+        for i in range(8):
+            ang = i * 3.14159 / 4
+            x1, y1 = cx + r * 1.1 * math.cos(ang), cy + r * 1.1 * math.sin(ang)
+            x2, y2 = cx + r * 1.5 * math.cos(ang), cy + r * 1.5 * math.sin(ang)
+            pygame.draw.line(surface, color, (x1, y1), (x2, y2), 2)
+    elif kind == "camera":
+        r = pygame.Rect(0, 0, int(rect.width * 0.55), int(rect.width * 0.4))
+        r.center = (cx, cy)
+        pygame.draw.rect(surface, color, r, width=2, border_radius=3)
+        pygame.draw.circle(surface, color, (cx, cy), int(rect.width * 0.14), width=2)
+    elif kind == "skin":        # simple color dot indicator
+        pygame.draw.circle(surface, color, (cx, cy), int(rect.width * 0.22))
+
+def draw_status_strip(card_x, card_y, card_w):
+    th = THEMES[current_theme]
+    strip_h = 32
+    strip_w = 720
+    strip_rect = pygame.Rect(SCREEN_WIDTH // 2 - strip_w // 2, card_y + 575, strip_w, strip_h)
+    
+    rounded_rect(screen, strip_rect, th["menu_row_bg"], radius=8)
+    pygame.draw.rect(screen, th["menu_row_border"], strip_rect, 1, border_radius=8)
+    
+    # Chip 1: Camera
+    cam_status = "Camera on" if camera_available else "Camera off"
+    cam_color = th["accent"] if camera_available else th["text_sub"]
+    cam_txt = tiny_font.render(cam_status, True, cam_color)
+    
+    cam_icon_rect = pygame.Rect(strip_rect.x + 14, strip_rect.centery - 8, 16, 16)
+    draw_icon(screen, "camera", cam_icon_rect, cam_color)
+    screen.blit(cam_txt, (strip_rect.x + 36, strip_rect.centery - cam_txt.get_height() // 2))
+    
+    # Chip 2: Skin
+    skin_text_str = active_skin.title()
+    skin_txt = tiny_font.render(skin_text_str, True, th["text_sub"])
+    total_w = 12 + 6 + skin_txt.get_width()
+    start_x = strip_rect.centerx - total_w // 2
+    
+    skin_icon_rect = pygame.Rect(start_x, strip_rect.centery - 6, 12, 12)
+    draw_icon(screen, "skin", skin_icon_rect, th["snake_body"])
+    screen.blit(skin_txt, (start_x + 18, strip_rect.centery - skin_txt.get_height() // 2))
+    
+    # Resolution chip in the corner (tiny & muted)
+    res_txt = tiny_font.render(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}", True, th["text_sub"])
+    screen.blit(res_txt, res_txt.get_rect(midright=(strip_rect.right - 14, strip_rect.centery)))
+
+def draw_settings():
+    th = THEMES[current_theme]
+    screen.fill(th["app_bg"])
+    
+    card_w = 880
+    card_h = 660
+    card_x = SCREEN_WIDTH // 2 - card_w // 2
+    card_y = SCREEN_HEIGHT // 2 - card_h // 2
+    card_rect = pygame.Rect(card_x, card_y, card_w, card_h)
+    
+    rounded_rect(screen, card_rect, th["panel_bg"], radius=th["corner_radius"] * 2)
+    pygame.draw.rect(screen, th["panel_edge"], card_rect, 2, border_radius=th["corner_radius"] * 2)
+    
+    title_text = title_font.render("Settings", True, th["text_main"])
+    title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, card_y + 50))
+    screen.blit(title_text, title_rect)
+    
+    sub_text = small_font.render("Press Esc to go back", True, th["text_sub"])
+    sub_rect = sub_text.get_rect(center=(SCREEN_WIDTH // 2, card_y + 105))
+    screen.blit(sub_text, sub_rect)
+    
+    # Quit button in settings
+    quit_rect = pygame.Rect(card_x + card_w - 106, card_y + 16, 90, 34)
+    rounded_rect(screen, quit_rect, th["menu_row_bg"], radius=6)
+    pygame.draw.rect(screen, th["menu_row_border"], quit_rect, 1, border_radius=6)
+    quit_txt = tiny_font.render("Quit", True, th["text_sub"])
+    screen.blit(quit_txt, quit_txt.get_rect(center=quit_rect.center))
+    
+    mode_str = screen_modes[current_screen_mode_idx]
+    settings_items = [
+        ("Theme",         "C", th["label"]),
+        ("Skin",          "S", active_skin),
+        ("Music",         "M", "ON" if music_active else "OFF"),
+        ("Screen",        "F", mode_str),
+        ("Resolution",    "P", f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}"),
+        ("Camera",        "V", "ON" if camera_available else "OFF"),
+        ("Camera source", "O", str(camera_index)),
+        ("Tracker",       "T", "ON" if show_motion_tracker else "OFF")
+    ]
+    
+    row_w = 720
+    row_h = 46
+    start_y = card_y + 165
+    spacing = 54
+    
+    for i, (label, key, val) in enumerate(settings_items):
+        y = start_y + (i * spacing)
+        row_rect = pygame.Rect(SCREEN_WIDTH // 2 - row_w // 2, y, row_w, row_h)
+        
+        rounded_rect(screen, row_rect, th["menu_row_bg"], radius=8)
+        pygame.draw.rect(screen, th["menu_row_border"], row_rect, 1, border_radius=8)
+        
+        # Label on left
+        label_text = stats_val_font.render(label, True, th["text_main"])
+        screen.blit(label_text, (row_rect.x + 14, row_rect.centery - label_text.get_height() // 2))
+        
+        # Value + hint on right
+        val_str = f"{val}   [{key}]"
+        val_text = stats_val_font.render(val_str, True, th["text_sub"])
+        screen.blit(val_text, val_text.get_rect(midright=(row_rect.right - 14, row_rect.centery)))
 
 def draw_mode_select():
     th = THEMES[current_theme]
@@ -709,8 +910,8 @@ def draw_mode_select():
     screen.fill(th["app_bg"])
     
     # Card dimensions
-    card_w = 700
-    card_h = 580
+    card_w = 880
+    card_h = 660
     card_x = SCREEN_WIDTH // 2 - card_w // 2
     card_y = SCREEN_HEIGHT // 2 - card_h // 2
     card_rect = pygame.Rect(card_x, card_y, card_w, card_h)
@@ -725,20 +926,34 @@ def draw_mode_select():
     screen.blit(title_text, title_rect)
     
     sub_text = small_font.render("Choose how you want to play", True, th["text_sub"])
-    sub_rect = sub_text.get_rect(center=(SCREEN_WIDTH // 2, card_y + 85))
+    sub_rect = sub_text.get_rect(center=(SCREEN_WIDTH // 2, card_y + 105))
     screen.blit(sub_text, sub_rect)
     
-    # Game modes list options
+    # Help button in top-right corner of card
+    help_rect = pygame.Rect(card_x + card_w - 50, card_y + 16, 34, 34)
+    rounded_rect(screen, help_rect, th["menu_row_bg"], radius=6)
+    pygame.draw.rect(screen, th["menu_row_border"], help_rect, 1, border_radius=6)
+    help_txt = small_font.render("?", True, th["text_sub"])
+    screen.blit(help_txt, help_txt.get_rect(center=help_rect.center))
+    
+    # Quit button in top-right corner of card
+    quit_rect = pygame.Rect(card_x + card_w - 150, card_y + 16, 90, 34)
+    rounded_rect(screen, quit_rect, th["menu_row_bg"], radius=6)
+    pygame.draw.rect(screen, th["menu_row_border"], quit_rect, 1, border_radius=6)
+    quit_txt = tiny_font.render("Quit", True, th["text_sub"])
+    screen.blit(quit_txt, quit_txt.get_rect(center=quit_rect.center))
+    
+    # Game modes list options (using kind strings for vector shapes)
     options = [
-        {"name": "Classic", "desc": "Traditional snake gameplay", "icon": "●"},
-        {"name": "Arcade", "desc": "Obstacles, portals, power-ups", "icon": "◆"},
-        {"name": "Zen", "desc": "No death, infinite gameplay", "icon": "∞"}
+        {"name": "Classic", "desc": "Traditional snake gameplay", "icon": "classic"},
+        {"name": "Arcade", "desc": "Obstacles, portals, power-ups", "icon": "arcade"},
+        {"name": "Zen", "desc": "No death, infinite gameplay", "icon": "zen"}
     ]
     
-    row_w = 600
-    row_h = 75
-    start_y = card_y + 130
-    spacing = 90
+    row_w = 720
+    row_h = 90
+    start_y = card_y + 165
+    spacing = 110
     
     for i, opt in enumerate(options):
         is_selected = i == selected_mode_index
@@ -751,45 +966,37 @@ def draw_mode_select():
         rounded_rect(screen, box_rect, bg, radius=th["corner_radius"] * 2)
         pygame.draw.rect(screen, border, box_rect, border_width, border_radius=th["corner_radius"] * 2)
         
-        # Icon box on left
-        icon_box = pygame.Rect(box_rect.x + 16, box_rect.y + 13, 48, 48)
+        # Icon box on left (48x48, rounded 10px)
+        icon_box = pygame.Rect(box_rect.x + 16, box_rect.y + (row_h - 48) // 2, 48, 48)
         icon_bg = th.get("menu_icon_bg_sel", th["menu_row_bg_sel"]) if is_selected else th.get("menu_icon_bg", th["menu_row_bg"])
-        rounded_rect(screen, icon_box, icon_bg, radius=th["corner_radius"])
+        rounded_rect(screen, icon_box, icon_bg, radius=10)
         
+        # Draw vector icon inside the icon box
         icon_color = th["text_main"] if is_selected else th["text_sub"]
-        icon_txt = font.render(opt["icon"], True, icon_color)
-        screen.blit(icon_txt, icon_txt.get_rect(center=icon_box.center))
+        draw_icon(screen, opt["icon"], icon_box, icon_color)
         
-        # Name and description
-        name_text = font.render(opt["name"], True, th["text_main"])
-        screen.blit(name_text, (box_rect.x + 80, box_rect.y + 12))
+        # Name (bold, 32px) and description (20px, muted)
+        name_text = menu_name_font.render(opt["name"], True, th["text_main"])
+        screen.blit(name_text, (box_rect.x + 84, box_rect.y + 18))
         
         desc_color = th["text_sub_sel"] if is_selected else th["text_sub"]
-        desc_text = small_font.render(opt["desc"], True, desc_color)
-        screen.blit(desc_text, (box_rect.x + 80, box_rect.y + 42))
+        desc_text = menu_desc_font.render(opt["desc"], True, desc_color)
+        screen.blit(desc_text, (box_rect.x + 84, box_rect.y + 52))
         
         # Selected indicator chevron
         if is_selected:
             chevron = font.render("›", True, th["text_main"])
-            screen.blit(chevron, chevron.get_rect(midright=(box_rect.right - 20, box_rect.centery)))
+            screen.blit(chevron, chevron.get_rect(midright=(box_rect.right - 24, box_rect.centery)))
 
     # Separator line
-    sep_y = card_y + 420
+    sep_y = card_y + 490
     pygame.draw.line(screen, th["panel_edge"], (card_x + 30, sep_y), (card_x + card_w - 30, sep_y), 1)
     
     # Action pills
-    draw_pills(["↑↓ Navigate", "Enter Select"], card_y + 440)
+    draw_pills(["↑↓ Navigate", "Enter Select", "Esc Quit", "H Settings"], card_y + 515)
     
-    # Settings pills
-    mode_str = screen_modes[current_screen_mode_idx]
-    settings_labels = [
-        f"[C] Theme: {th['label']}",
-        f"[S] Skin: {active_skin}",
-        f"[M] Music: {'ON' if music_active else 'OFF'}",
-        f"[F] Screen: {mode_str}",
-        f"[V] Camera: {'ON' if camera_available else 'OFF'}"
-    ]
-    draw_pills(settings_labels, card_y + 490)
+    # Compact Status strip below pills
+    draw_status_strip(card_x, card_y, card_w)
 
 while running:
     dt = clock.tick(60) / 1000.0
@@ -801,19 +1008,19 @@ while running:
                 toggle_fullscreen()
             elif event.key == pygame.K_c:
                 cycle_theme()
-            elif show_mode_select:
-                if event.key in (pygame.K_q, pygame.K_ESCAPE):
-                    running = False
-                elif event.key == pygame.K_UP:
-                    selected_mode_index = (selected_mode_index - 1) % 3
-                elif event.key == pygame.K_DOWN:
-                    selected_mode_index = (selected_mode_index + 1) % 3
+            elif show_mode_select or show_settings:
+                if event.key == pygame.K_h:
+                    if show_mode_select:
+                        show_settings = True
+                        show_mode_select = False
+                    else:
+                        show_mode_select = True
+                        show_settings = False
+                    play_sound("powerup")
                 elif event.key == pygame.K_s:
                     cycle_skin(forward=True)
                 elif event.key == pygame.K_m:
                     toggle_music()
-                elif event.key == pygame.K_f:
-                    toggle_fullscreen()
                 elif event.key == pygame.K_v:
                     if camera_available:
                         close_camera()
@@ -822,16 +1029,42 @@ while running:
                         if not camera_available:
                             show_camera_error = True
                             camera_error_timer = 3.0
-                elif event.key == pygame.K_RETURN:
-                    modes_list = [GameMode.CLASSIC, GameMode.ARCADE, GameMode.ZEN]
-                    game_mode = modes_list[selected_mode_index]
-                    show_mode_select = False
-                    game = SnakeGame(mode=game_mode)
-                    direction_queue.clear()
-                    move_timer = 0.0
-                    game_over = False
-                    paused = False
-                    update_music()
+                elif event.key == pygame.K_o:
+                    camera_index = (camera_index + 1) % 5
+                    if camera_available:
+                        initialize_camera(camera_index)
+                elif event.key == pygame.K_p:
+                    cycle_resolution()
+                elif event.key == pygame.K_t:
+                    show_motion_tracker = not show_motion_tracker
+                    play_sound("powerup")
+
+                # Screen-specific navigation / transitions
+                elif show_mode_select:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False  # ESC in menu quits the game
+                    elif event.key == pygame.K_q:
+                        running = False
+                    elif event.key == pygame.K_UP:
+                        selected_mode_index = (selected_mode_index - 1) % 3
+                    elif event.key == pygame.K_DOWN:
+                        selected_mode_index = (selected_mode_index + 1) % 3
+                    elif event.key == pygame.K_RETURN:
+                        modes_list = [GameMode.CLASSIC, GameMode.ARCADE, GameMode.ZEN]
+                        game_mode = modes_list[selected_mode_index]
+                        show_mode_select = False
+                        game = SnakeGame(mode=game_mode)
+                        direction_queue.clear()
+                        move_timer = 0.0
+                        game_over = False
+                        paused = False
+                        update_music()
+                elif show_settings:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                        show_mode_select = True
+                        show_settings = False
+                    elif event.key == pygame.K_q:
+                        running = False
             elif entering_name:
                 if event.key == pygame.K_RETURN:
                     leaderboard = add_to_leaderboard(game.score, player_name or "Player")
@@ -909,6 +1142,10 @@ while running:
                             camera_error_timer = 3.0
                         else:
                             show_camera_preview = True
+                elif event.key == pygame.K_o:
+                    camera_index = (camera_index + 1) % 5
+                    if camera_available:
+                        initialize_camera(camera_index)
                 elif event.key == pygame.K_l:
                     show_leaderboard = True
         elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -917,6 +1154,24 @@ while running:
                 w, h = display_screen.get_size()
                 logical_mx = int(mx * (SCREEN_WIDTH / w))
                 logical_my = int(my * (SCREEN_HEIGHT / h))
+                
+                card_w = 880
+                card_x = SCREEN_WIDTH // 2 - card_w // 2
+                card_y = SCREEN_HEIGHT // 2 - 660 // 2
+                
+                if show_mode_select or show_settings:
+                    # Help button "?" click behavior: toggles settings page
+                    help_rect = pygame.Rect(card_x + card_w - 50, card_y + 16, 34, 34)
+                    if show_mode_select and help_rect.collidepoint(logical_mx, logical_my):
+                        show_settings = True
+                        show_mode_select = False
+                        play_sound("powerup")
+                    else:
+                        # Quit button click behavior:
+                        quit_x = card_x + card_w - 106 if show_settings else card_x + card_w - 150
+                        quit_rect = pygame.Rect(quit_x, card_y + 16, 90, 34)
+                        if quit_rect.collidepoint(logical_mx, logical_my):
+                            running = False
                 
                 stats_rect = pygame.Rect(18, 64, SCREEN_WIDTH - 36, 44)
                 if stats_rect.collidepoint(logical_mx, logical_my):
@@ -1023,8 +1278,13 @@ while running:
                     game.game_over = False
 
     th = THEMES[current_theme]
-    if show_mode_select:
-        draw_mode_select()
+    if show_mode_select or show_settings:
+        if show_mode_select:
+            draw_mode_select()
+        else:
+            draw_settings()
+            
+
 
         if th["scanlines"]:
             overlay_lines = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1154,9 +1414,9 @@ while running:
 
     draw_particles()
 
-    if camera_available and camera_available:
+    if camera_available and show_motion_tracker:
         if hand_x is not None and hand_y is not None:
-            hand_pixel_x = int(hand_x * SCREEN_WIDTH)
+            hand_pixel_x = int((1.0 - hand_x) * SCREEN_WIDTH)
             hand_pixel_y = int(hand_y * SCREEN_HEIGHT)
             
             if PLAY_AREA_TOP <= hand_pixel_y < SCREEN_HEIGHT:

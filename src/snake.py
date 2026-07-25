@@ -42,7 +42,15 @@ class PowerUp:
         self.x = x
         self.y = y
         self.type = power_type
-        self.duration = 150
+        # Set shorter, type-specific durations (in ticks/move steps)
+        if power_type == PowerUp.TYPE_FREEZE:
+            self.duration = 40  # Halved speed means 8 seconds at normal pace
+        elif power_type == PowerUp.TYPE_SHIELD:
+            self.duration = 60  # ~6 seconds at normal pace
+        elif power_type == PowerUp.TYPE_SPEED_BOOST:
+            self.duration = 80  # ~5.3 seconds at speed-up pace
+        else:
+            self.duration = 60  # ~6 seconds
         self.lifetime = 200
 
 class SnakeGame:

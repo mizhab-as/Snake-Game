@@ -48,5 +48,10 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='SnakeGame.app',
-    bundle_identifier=None,
+    bundle_identifier='com.mizhabas.snakegame',
+    info_plist={
+        'NSCameraUsageDescription': 'This game requires camera access for hand gesture control.',
+        'CFBundleShortVersionString': '1.0.0',
+        'CFBundleVersion': '1.0.0',
+    },
 )

@@ -1,92 +1,120 @@
-name: Build and Release SnakeGame
+name: Build & Release
 
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - 'v*'          # triggers on any tag like v1.0, v1.2.3, etc.
+  workflow_dispatch:  # lets you trigger it manually from GitHub UI
 
 jobs:
+  # ─────────────────────────────────────────────
+  # macOS  →  .app bundle zipped
+  # ─────────────────────────────────────────────
   build-macos:
+    name: Build macOS App
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+          cache: pip
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-      
-      - name: Build macOS app
-        run: pyinstaller SnakeGame.spec
-      
-      - name: Create DMG installer
-        run: |
-          hdiutil create -volname "SnakeGame" -srcfolder dist/SnakeGame.app -ov -format UDZO dist/SnakeGame.dmg
-      
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: macos-builds
-          path: |
-            dist/SnakeGame.app
-            dist/SnakeGame.dmg
+          pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
 
+      - name: Build .app with PyInstaller
+        run: pyinstaller -y SnakeGame.spec
+
+      - name: Zip the .app bundle
+        run: |
+          cd dist
+          zip -r --symlinks SnakeGame_macOS.zip SnakeGame.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SnakeGame-macOS
+          path: dist/SnakeGame_macOS.zip
+
+  # ─────────────────────────────────────────────
+  # Windows  →  single .exe
+  # ─────────────────────────────────────────────
   build-windows:
+    name: Build Windows EXE
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+          cache: pip
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-      
-      - name: Build Windows executable
-        run: pyinstaller SnakeGame-Windows.spec
-      
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v3
+          pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build .exe with PyInstaller
+        run: pyinstaller -y SnakeGame-Windows.spec
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-builds
+          name: SnakeGame-Windows
           path: dist/SnakeGame.exe
 
-  create-release:
+  # ─────────────────────────────────────────────
+  # Publish a GitHub Release with both files
+  # (only runs on tag pushes)
+  # ─────────────────────────────────────────────
+  release:
+    name: Publish GitHub Release
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v3
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
         with:
-          name: macos-builds
-          path: ./macos-builds
-      
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v3
+          name: SnakeGame-macOS
+          path: release/
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
         with:
-          name: windows-builds
-          path: ./windows-builds
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+          name: SnakeGame-Windows
+          path: release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
+          name: Snake Game ${{ github.ref_name }}
+          body: |
+            ## 🐍 Snake Game ${{ github.ref_name }}
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | 🍎 macOS | `SnakeGame_macOS.zip` — extract and double-click `SnakeGame.app` |
+            | 🪟 Windows | `SnakeGame.exe` — run directly, no install needed |
+
+            ### Controls
+            | Key | Action |
+            |-----|--------|
+            Arrow keys / WASD | Move snake |
+            H | Settings |
+            Esc | Quit (in menu) / Pause (in game) |
+            C | Cycle theme |
+            S | Cycle skin |
+            M | Toggle music |
+            V | Toggle camera |
+            T | Toggle motion tracker |
           files: |
-            ./macos-builds/SnakeGame.dmg
-            ./windows-builds/SnakeGame.exe
-          draft: false
-          prerelease: false
+            release/SnakeGame_macOS.zip
+            release/SnakeGame.exe
