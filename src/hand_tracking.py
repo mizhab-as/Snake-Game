@@ -1,11 +1,12 @@
 import sys
 import os
 
-# When running inside a PyInstaller bundle, mediapipe cannot find its model files
-# unless we point it to the correct extracted location (_MEIPASS).
-if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-    _mediapipe_path = os.path.join(sys._MEIPASS, 'mediapipe')
-    os.environ.setdefault('MEDIAPIPE_RESOURCE_DIR', _mediapipe_path)
+# When running inside a PyInstaller bundle, mediapipe resolves model paths
+# relative to the directory 3 levels up from solution_base.py.
+# solution_base.py lives at: _MEIPASS/mediapipe/python/solution_base.py
+# So root_path = _MEIPASS — which is exactly where our datas land.
+# No manual path patching is needed; the spec must bundle ALL mediapipe
+# data files including .txt (handedness.txt), .tflite, .binarypb, .fbs.
 
 import cv2
 import mediapipe as mp
@@ -14,11 +15,14 @@ from collections import deque
 
 mp_hands = None
 hands = None
+_hands_init_error = None
 try:
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
-except Exception:
-    pass
+except Exception as e:
+    _hands_init_error = str(e)
+    # Print so the error shows in console/logs when running from source
+    print(f"[hand_tracking] WARNING: Could not initialize MediaPipe Hands: {e}", file=sys.stderr)
 
 hand_position_history = deque(maxlen=10)  # Increased to 10 for better noise filtering
 last_direction = None
@@ -42,6 +46,7 @@ def _process_frame_cached(frame):
         _cached_frame_id = frame_id
         return _cached_result
     except Exception as e:
+        print(f"[hand_tracking] Frame processing error: {e}", file=sys.stderr)
         return None
 
 def calculate_distance(point1, point2):
@@ -90,14 +95,17 @@ def get_direction(frame):
     
     try:
         result = _process_frame_cached(frame)
-        if not result or not result.multi_hand_landmarks or not result.multi_handedness:
+        if not result or not result.multi_hand_landmarks:
             # Clear history if no hand is visible to prevent old swipes from registering
             hand_position_history.clear()
             return None, 0
         
         hand = result.multi_hand_landmarks[0]
-        handedness = result.multi_handedness[0]
-        hand_confidence = handedness.classification[0].score
+
+        # Get handedness confidence if available; fall back gracefully if missing
+        hand_confidence = 0.8  # default when handedness info unavailable
+        if result.multi_handedness and len(result.multi_handedness) > 0:
+            hand_confidence = result.multi_handedness[0].classification[0].score
         
         if hand_confidence < 0.65:
             return None, hand_confidence
@@ -145,6 +153,7 @@ def get_direction(frame):
         return None, hand_confidence
     
     except Exception as e:
+        print(f"[hand_tracking] get_direction error: {e}", file=sys.stderr)
         return None, 0
 
 
@@ -159,7 +168,7 @@ def get_hand_position(frame):
             ref_point = hand.landmark[9]
             gesture_type = detect_gesture(hand)
             return ref_point.x, ref_point.y, gesture_type
-    except:
-        pass
+    except Exception as e:
+        print(f"[hand_tracking] get_hand_position error: {e}", file=sys.stderr)
     
     return None, None, None
