@@ -1,136 +1,214 @@
-# Snake Game with Hand Gesture Control
+# Snake Game - Hand Gesture Control
 
-A Snake game with hand gesture control using computer vision. Features multiple game modes, leaderboard system, power-ups, and a gorgeous dual-theme design system.
+[![Release](https://img.shields.io/github/v/release/mizhab-as/Snake-Game?style=flat-square&color=2bbc8a)](https://github.com/mizhab-as/Snake-Game/releases)
+[![Build & Release](https://img.shields.io/github/actions/workflow/status/mizhab-as/Snake-Game/build.yml?style=flat-square&label=build)](https://github.com/mizhab-as/Snake-Game/actions)
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](https://www.python.org/)
+[![License](https://img.shields.io/github/license/mizhab-as/Snake-Game?style=flat-square)](LICENSE)
+
+A modern, desktop Snake game written in Python with real-time hand gesture controls powered by MediaPipe and OpenCV. Control the snake seamlessly using hand swipes in front of your webcam, or play using conventional keyboard controls. Built with Pygame-CE, featuring multi-mode gameplay, dynamic power-ups, customizable themes, skin customization, local leaderboards, and synthesized audio.
+
+Available as a standalone executable for **Windows (.exe)** and **macOS (.app)** with zero dependencies required.
+
+---
+
+## Gameplay Previews & Interface
+
+### Mode Selection
+Choose between Classic, Arcade, and Zen modes from a clean UI card interface.
+
+![Mode Select Screen](assets/screenshots/1.png)
+
+### Modern Arcade Gameplay
+Arcade mode features interactive portals, obstacles, food streaks, dynamic particle explosions, active power-up tracking, and optional real-time webcam motion tracking.
+
+![Modern Arcade Mode Gameplay](assets/screenshots/2.png)
+
+### Retro Game Boy Theme
+Switch anytime to a nostalgic 2-bit green LCD grid theme with high-contrast pixel block snake segments and classic sound feedback.
+
+![Retro Game Boy Theme](assets/screenshots/6.png)
+
+### Comprehensive Settings Menu
+Tune resolution, toggle full-screen, switch camera hardware sources, toggle live camera PIP view, and manage motion tracking overlays.
+
+![Settings Menu](assets/screenshots/5.png)
+
+### High Scores & Local Leaderboard
+Record high scores per mode in a local JSON storage system with a clean player-name entry dialog.
+
+![New High Score Entry](assets/screenshots/3.png)
+![Game Over and Leaderboard](assets/screenshots/4.png)
+
+### Video Demonstration
+Gameplay demonstration video is available at [`assets/videos/11.mp4`](assets/videos/11.mp4).
+
+---
 
 ## Features
 
-### Dual Themes (Toggled with **C**)
-- **Modern**: Charcoal matte dark layout, rounded corners, soft glowing outline borders, and size-pulsing food.
-- **Retro**: Nokia LCD style featuring a sage green board, high-contrast near-black snake body segments, circle snake head, and size-pulsing blocky retro food.
+### ✋ Computer Vision & Gesture Control
+- **MediaPipe Hand Tracking**: Real-time hand landmark detection tracking the palm reference point (Middle Finger MCP) for stable swipe registration.
+- **Directional Swipe Recognition**: Swipe **UP**, **DOWN**, **LEFT**, or **RIGHT** in mid-air to direct the snake.
+- **Noise Filtering & Frame Caching**: 10-frame rolling window smoothing (`deque`) prevents accidental turns, while per-frame inference caching ensures high FPS.
+- **Webcam PIP & Motion Tracker**: Live video feed PIP inset in the corner with hand tracking overlay points.
 
-### Game Modes
-- **Classic**: Traditional snake with wrapping borders
-- **Arcade**: Obstacles, portals, and dynamic challenges that increase with difficulty
-- **Zen**: No death, relaxed speed, and infinite gameplay
+### 🎮 Game Modes
+- **Classic**: The timeless Snake experience with wrapping screen boundaries and continuous speed scaling.
+- **Arcade**: Dynamic gameplay with randomly generated obstacles, inter-dimensional warp portals (teleporting the snake from Portal A to Portal B), and timed power-up drops.
+- **Zen**: Infinite, mortality-free mode designed for casual play, testing hand gestures, or relaxed gaming.
 
-### Controls
-- **Hand Gestures**: Move your hand up/down/left/right to control snake (requires camera)
-- **Keyboard**: Arrow keys or WASD keys
-- Press **C** to cycle theme, **H** for gesture help, **L** for leaderboard, **R** to restart, **M** for main menu, **Q** or **ESC** to quit/exit the game instantly.
+### ⚡ Power-Ups & Mechanics
+- 🛡️ **Shield**: Prevents fatal collisions with obstacles, walls, or self-intersections.
+- ⚡ **Speed Boost**: Temporarily boosts snake movement speed.
+- ❄️ **Freeze**: Slows game tick rate for precision maneuvering.
+- ✖️ **Score Multiplier (2x)**: Doubles points earned for all food collected while active.
+- 👻 **Ghost Mode**: Allows the snake to pass through its own body segments without dying.
 
-### Gameplay & UI Polish
-- **Segmented Stats Panel**: Taller, high-contrast, segmented stats panel displaying Speed, Length, Mode, and Camera state with zero text overlap.
-- **Card-Style Dialog Popups**: Centered dialog boxes for Pause, High Score name entry, and Game Over.
-- **Centered Name Entry**: Player name and cursor are perfectly centered inside the leaderboard name input field.
-- Power-ups: Speed Boost, Score Multiplier (2x), Shield
-- Progressive difficulty increases every 200 points
-- Combo system tracks consecutive food eaten
-- Particle effects for visual feedback
-- Top 10 leaderboard with player names
+### 🎨 Themes & Customization
+- **Modern Theme**: Matte dark interface with radial glow effects, rounded UI cards, clean typography, and particle explosions.
+- **Retro Theme**: Classic Game Boy LCD aesthetic featuring sage green grids and dark pixel blocks.
+- **Snake Skins**:
+  - **Chameleon**: Smooth color transitions across the snake body.
+  - **Neon Glow**: High-contrast outline with glowing head.
+  - **Rainbow**: Gradient spectrum body segments.
 
-## Screenshots And Videos
+### 🎵 Audio Engine
+- Custom-synthesized sound effects generated natively using NumPy sound buffers in Pygame-CE (no external audio files required).
+- Distinct sound feedback for eating food, picking up power-ups, warping through portals, and game-over events.
 
-### Screenshots
+---
 
-![Main Menu](assets/screenshots/1.jpeg)
-![Gameplay](assets/screenshots/2.jpeg)
-![Hand Tracking](assets/screenshots/3.jpeg)
-![Leaderboard](assets/screenshots/4.jpeg)
+## Quick Controls & Shortcuts
 
-### Demo Videos
+| Action | Hand Gesture | Keyboard Key |
+|---|---|---|
+| **Move Up** | Swipe Up | `↑` or `W` |
+| **Move Down** | Swipe Down | `↓` or `S` |
+| **Move Left** | Swipe Left | `←` or `A` |
+| **Move Right** | Swipe Right | `→` or `D` |
+| **Navigate Menus** | — | `↑` / `↓` |
+| **Select Menu Item** | — | `Enter` |
+| **Open Settings** | — | `H` |
+| **Cycle Theme** | — | `C` |
+| **Cycle Snake Skin** | — | `S` |
+| **Toggle Audio** | — | `M` |
+| **Toggle Camera** | — | `V` |
+| **Cycle Camera Source** | — | `O` |
+| **Toggle Motion Tracker** | — | `T` |
+| **Toggle Camera PIP** | — | `B` |
+| **Toggle Fullscreen** | — | `F` |
+| **Cycle Resolution** | — | `P` |
+| **Gesture Help Dialog** | — | `?` |
+| **Pause / Menu / Quit** | — | `Esc` / `M` / `Q` |
 
-- [Watch Demo Video 1](assets/videos/5.mp4)
-- [Watch Demo Video 2](assets/videos/6.mp4)
+---
 
-## Installation
+## Download & Installation
 
-Requires Python 3.10+ and a webcam (optional for hand tracking).
+### Option 1: Standalone Releases (Recommended)
+Download pre-packaged, zero-dependency executables directly from the **[GitHub Releases](https://github.com/mizhab-as/Snake-Game/releases)** page:
+- **macOS**: Download `SnakeGame_macOS.zip`, extract, and open `SnakeGame.app`.
+- **Windows**: Download `SnakeGame.exe` and run directly.
 
-### Option 1: Run From Source
+### Option 2: Run From Source
+
+#### Prerequisites
+- Python 3.10 or Python 3.11
+- A working webcam (required for hand tracking; keyboard mode works without a camera)
+
+#### Automated Setup (Convenience Scripts)
+Clone the repository and run the setup script for your OS (it automatically configures a virtual environment and installs dependencies):
+
+**macOS / Linux:**
 ```bash
 git clone https://github.com/mizhab-as/Snake-Game.git
 cd Snake-Game
-python -m venv venv
-venv\Scripts\activate      # On Windows
-source venv/bin/activate   # On macOS/Linux
+chmod +x run.sh
+./run.sh
+```
+
+**Windows:**
+```cmd
+git clone https://github.com/mizhab-as/Snake-Game.git
+cd Snake-Game
+run.bat
+```
+
+#### Manual Setup
+```bash
+git clone https://github.com/mizhab-as/Snake-Game.git
+cd Snake-Game
+
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install required packages
 pip install -r requirements.txt
+
+# Launch game
 python src/main.py
 ```
 
-### Option 2: Standalone Windows Executable
-- Run `dist/SnakeGame.exe` directly
-- No Python installation required
+---
 
-## How to Play
-
-1. Start the game with `python src/main.py` or launch the app
-2. Select mode with UP/DOWN arrows, press ENTER
-3. Control snake with hand gestures or keyboard
-4. Collect food and power-ups, avoid obstacles
-5. Try to beat the high score
-
-## Project Structure
+## Technical Architecture & How Hand Tracking Works
 
 ```
-snake_game/
+Snake-Game/
 ├── src/
-│   ├── main.py           # Game loop and UI
-│   ├── snake.py          # Game logic
-│   └── hand_tracking.py  # Hand gesture detection
-├── requirements.txt
+│   ├── main.py           # Pygame window management, UI rendering, menu loops, settings, and main engine loop
+│   ├── snake.py          # Core game logic, grid state, snake physics, power-up mechanics, portal teleportation
+│   └── hand_tracking.py  # MediaPipe Hand solution, OpenCV capture pipeline, deque gesture recognition
+├── assets/
+│   ├── screenshots/      # Gameplay screenshots for documentation
+│   └── videos/           # Gameplay demonstration recordings
+├── SnakeGame.spec        # PyInstaller specification file for macOS (.app bundle with entitlement configs)
+├── SnakeGame-Windows.spec# PyInstaller specification file for Windows (.exe standalone)
+├── .github/workflows/    # CI/CD workflow for automated multi-platform PyInstaller builds and GitHub Releases
+├── requirements.txt      # Dependency manifest (pygame-ce, opencv-contrib-python, mediapipe, numpy)
+├── run.sh / run.bat      # Native runner scripts with automated venv creation
 └── README.md
 ```
 
-## Tech Stack
+### Hand Tracking Implementation
+1. **Camera Frame Acquisition**: OpenCV captures raw video frames at 640x480 resolution (using `CAP_AVFOUNDATION` on macOS for hardware acceleration).
+2. **Inference Caching**: To prevent running heavy ML models multiple times in a single frame update, `_process_frame_cached()` stores the MediaPipe output by frame memory ID.
+3. **Reference Landmark**: Uses Landmark 9 (Middle Finger MCP) as the palm center anchor point rather than fingertips for stable tracking.
+4. **Displacement Calculation**: Maintains a rolling history of 10 coordinates. A swipe is registered when relative spatial movement exceeds the threshold (0.025 normalized coordinate delta) along the dominant axis.
+5. **Auto-Reset**: Swipes automatically flush the position history to avoid double-triggering or continuous key-like repeats.
 
-- pygame (game engine)
-- OpenCV (video capture)
-- MediaPipe (hand tracking)
-- NumPy (math)
+---
 
-## Scoring
+## Building Standalone Executables
 
-- Food: 10 points × difficulty × multiplier
-- Power-up: 50 points
-- Combo system for consecutive food
+The repository includes PyInstaller configuration files that package MediaPipe's binary graphs, model files (`.tflite`), and label maps (`handedness.txt`) into the bundle:
 
-## Building Executable (Windows)
+```bash
+# Build macOS .app
+pyinstaller -y SnakeGame.spec
 
-To bundle the game into a standalone `.exe` executable:
+# Build Windows .exe
+pyinstaller -y SnakeGame-Windows.spec
+```
 
-1. Activate your virtual environment and install PyInstaller:
-   ```bash
-   venv\Scripts\activate
-   pip install pyinstaller
-   ```
-2. Build the executable using the spec file:
-   ```bash
-   pyinstaller --clean SnakeGame-Windows.spec
-   ```
-The standalone executable will be generated at `dist/SnakeGame.exe`.
+Bundled binaries are generated inside the `dist/` directory.
 
-## Uploading to GitHub
+---
 
-To share your game on your GitHub page:
-1. Commit and push your code updates:
-   ```bash
-   git add .
-   git commit -m "Add dual themes, HUD improvements, and bug fixes"
-   git push origin main
-   ```
-2. Go to your repository on GitHub.
-3. Click on **Releases** -> **Create a new release**.
-4. Drag and drop the built `dist/SnakeGame.exe` file into the release binaries box.
-5. Publish the release so players can download and run it directly!
+## Dependencies
 
-## Contributing
+- **`pygame-ce`** (>= 2.5.7): Community Edition of Pygame for rendering, event dispatch, and audio synthesis.
+- **`opencv-contrib-python`** (>= 4.10.0): Real-time video frame acquisition and color conversion.
+- **`mediapipe`** (== 0.10.5): Machine learning hand landmark extraction.
+- **`numpy`** (>= 1.26.0): Matrix math for audio waveform synthesis and frame processing.
 
-Feel free to report bugs, suggest features, or submit pull requests.
+---
 
 ## License
 
-MIT License
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Author
 
-Mizhab A S
+Created by **[Mizhab A S](https://github.com/mizhab-as)**.
