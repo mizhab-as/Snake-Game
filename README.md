@@ -52,17 +52,34 @@ Get zero-dependency, pre-packaged binaries directly from **[GitHub Releases](htt
 
 ---
 
+<div align="center">
+
 ## Visual Showcase
 
-| Mode Selection | Settings Menu |
-|---|---|
-| ![Mode Select Screen](assets/screenshots/1.png) | ![Settings Menu](assets/screenshots/5.png) |
+<table>
+  <tr>
+    <th width="50%">Mode Selection</th>
+    <th width="50%">Settings Menu</th>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/1.png" alt="Mode Select Screen"></td>
+    <td><img src="assets/screenshots/5.png" alt="Settings Menu"></td>
+  </tr>
+  <tr>
+    <th width="50%">Retro LCD Theme</th>
+    <th width="50%">Leaderboard & Game Over</th>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/6.png" alt="Retro Theme"></td>
+    <td><img src="assets/screenshots/4.png" alt="Leaderboard Screen"></td>
+  </tr>
+</table>
 
-| Retro LCD Theme | Leaderboard & Game Over |
-|---|---|
-| ![Retro Theme](assets/screenshots/6.png) | ![Leaderboard Screen](assets/screenshots/4.png) |
+<p>
+📹 <b>Video Demo</b>: A full gameplay video demonstration is included at <a href="assets/videos/11.mp4"><code>assets/videos/11.mp4</code></a>.
+</p>
 
-> 📹 **Video Demo**: A full gameplay video demonstration is included at [`assets/videos/11.mp4`](assets/videos/11.mp4).
+</div>
 
 ---
 
